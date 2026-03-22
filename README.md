@@ -130,6 +130,9 @@ Defined through `.env.example` and `.env.docker.example`:
 - Commit only template config files (`.env.example`, `.env.docker.example`)
 - Validate the full stack with Docker Compose before merging
 
+New contributors should follow the full step-by-step onboarding document:
+`TEAM_ONBOARDING_GUIDE.md`
+
 ## Security and Operational Notes
 
 - Do not store real secrets in tracked files.
