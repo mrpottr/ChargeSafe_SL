@@ -191,3 +191,87 @@ git merge main
 5. Can push branch and open PR
 
 If all 5 are done, you are fully ready to collaborate on ChargeSafe SL.
+
+## 12. Quick Git Commands (Push/Pull Cheat Sheet)
+
+Use this exact sequence.
+
+Start of day (get latest team code):
+
+```bash
+git checkout main
+git pull origin main
+```
+
+Meaning:
+
+- `git checkout main` moves you to the main branch
+- `git pull origin main` downloads latest main from GitHub
+
+Start a new task:
+
+```bash
+git checkout -b feature/my-task
+```
+
+Meaning:
+
+- creates your branch and switches to it
+
+Save your code changes:
+
+```bash
+git add .
+git commit -m "Describe what you changed"
+```
+
+Meaning:
+
+- `git add .` stages changes
+- `git commit` saves a local snapshot
+
+Push your branch to GitHub:
+
+```bash
+git push -u origin feature/my-task
+```
+
+Meaning:
+
+- uploads your feature branch (not main)
+
+Open Pull Request on GitHub:
+
+1. Go to your repo page
+2. Click `Compare & pull request`
+3. Base branch: `main`
+4. Compare branch: `feature/my-task`
+5. Create PR and request review
+
+After PR is merged:
+
+```bash
+git checkout main
+git pull origin main
+git branch -d feature/my-task
+```
+
+Meaning:
+
+- sync local main with merged code
+- delete old local feature branch
+
+If your branch gets behind main:
+
+```bash
+git checkout main
+git pull origin main
+git checkout feature/my-task
+git merge main
+git push
+```
+
+Golden rule:
+
+- Do not use `git push origin main` for daily work.
+- Always push to your own `feature/...` branch, then merge with a PR.
