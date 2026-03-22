@@ -1,51 +1,96 @@
 # ChargeSafe SL
 
-ChargeSafe SL is a team-ready full-stack platform scaffold built with FastAPI, React, and PostgreSQL.
+ChargeSafe SL is a web platform focused on EV charging safety and cyber risk awareness for Sri Lanka, combining a FastAPI backend, React frontend, and PostgreSQL data layer in a Docker-first development workflow.
 
-## Stack
+## Overview
 
-- Backend: FastAPI + SQLAlchemy + Psycopg
-- Frontend: React + Vite
+This repository contains the current working system foundation for:
+
+- API service and database connectivity
+- Charging station data retrieval
+- Health and readiness monitoring endpoints
+- Containerized local development for team collaboration
+
+## Technology Stack
+
+- Backend: FastAPI, SQLAlchemy, Psycopg
+- Frontend: React, Vite
 - Database: PostgreSQL 16
-- Container orchestration: Docker Compose
+- DevOps: Docker Compose
 
-## Project structure
+## System Architecture
 
-- `database/init/001_schema.sql`: PostgreSQL schema with the requested `station_images` omission
-- `database/create_database.ps1`: local PostgreSQL bootstrap script
-- `backend/`: FastAPI service
-- `frontend/`: React client
-- `docker-compose.yml`: shared team development environment
+- `frontend` (React/Vite) consumes API endpoints from `backend`
+- `backend` (FastAPI) serves REST endpoints and queries PostgreSQL
+- `db` (PostgreSQL) initializes schema from `database/init/001_schema.sql`
+- Services are orchestrated through `docker-compose.yml`
 
-## Team workflow with Docker
+## Repository Structure
 
-1. Copy `.env.docker.example` to `.env.docker`
-2. Set a shared local password in `.env.docker`
-3. Start the stack:
+- `backend/` FastAPI service source and Dockerfile
+- `frontend/` React application source and Dockerfile
+- `database/init/001_schema.sql` PostgreSQL schema bootstrap
+- `database/create_database.ps1` local database bootstrap script
+- `docker-compose.yml` multi-service orchestration
+- `.env.example` local (non-Docker) environment template
+- `.env.docker.example` Docker environment template
+
+## Implemented API Endpoints
+
+- `GET /api/health` database connectivity health check
+- `GET /api/ready` service readiness check
+- `GET /api/stations` latest charging stations (up to 50 rows)
+
+Interactive docs are available at `/docs` when backend is running.
+
+## Database
+
+The schema is defined in `database/init/001_schema.sql` and includes:
+
+- Core station and user entities
+- Incident reporting entities
+- Cyber/ML score support tables
+- Geospatial support via `cube` and `earthdistance`
+- Audit and chatbot session tables
+
+PostgreSQL initialization behavior:
+
+- SQL scripts in `/docker-entrypoint-initdb.d/` run only when the DB volume is new/empty.
+- If schema changes are made later, apply migrations or recreate the DB volume in development.
+
+## Quick Start (Docker)
+
+1. Create Docker env file:
+
+```powershell
+Copy-Item .env.docker.example .env.docker
+```
+
+2. Update values in `.env.docker` if required (passwords/ports).
+
+3. Start all services:
 
 ```powershell
 docker compose --env-file .env.docker up --build
 ```
 
-4. Open the apps:
+4. Access services:
 
 - Frontend: `http://localhost:5173`
-- Backend docs: `http://localhost:8000/docs`
+- Backend API docs: `http://localhost:8000/docs`
 - Backend health: `http://localhost:8000/api/health`
 
-The PostgreSQL schema is automatically applied when the `db` container initializes for the first time.
+## Local Development (Without Docker)
 
-## Local workflow without Docker
-
-1. Copy `.env.example` to `.env`
-2. Update your PostgreSQL credentials
-3. Create the database:
+1. Create local env file:
 
 ```powershell
-.\database\create_database.ps1
+Copy-Item .env.example .env
 ```
 
-4. Run the backend:
+2. Ensure PostgreSQL is available locally and run schema bootstrap if needed.
+
+3. Start backend:
 
 ```powershell
 cd backend
@@ -55,7 +100,7 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
-5. Run the frontend:
+4. Start frontend:
 
 ```powershell
 cd frontend
@@ -63,14 +108,30 @@ npm install
 npm run dev
 ```
 
-## API endpoints
+## Environment Variables
 
-- `GET /api/health`
-- `GET /api/ready`
-- `GET /api/stations`
+Defined through `.env.example` and `.env.docker.example`:
 
-## Notes
+- `POSTGRES_DB`
+- `POSTGRES_USER`
+- `POSTGRES_PASSWORD`
+- `POSTGRES_PORT`
+- `BACKEND_PORT`
+- `FRONTEND_PORT`
+- `BACKEND_CORS_ORIGINS`
+- `VITE_API_BASE_URL`
 
-- The schema enables `pgcrypto`, `cube`, and `earthdistance`.
-- The `station_images` table was intentionally excluded.
-- Docker is the recommended path for team collaboration to avoid environment drift.
+## Team Collaboration Workflow
+
+- Use a shared Git repository with protected `main`
+- Create feature branches: `feature/<name>`, `fix/<name>`
+- Open PRs for every merge and require at least one review
+- Keep secrets out of Git (`.env`, `.env.docker` should stay uncommitted)
+- Commit only template config files (`.env.example`, `.env.docker.example`)
+- Validate the full stack with Docker Compose before merging
+
+## Security and Operational Notes
+
+- Do not store real secrets in tracked files.
+- Keep local ports configurable to avoid conflicts with other running projects.
+- Use container health checks (`db`) as startup dependency gating for backend readiness.
