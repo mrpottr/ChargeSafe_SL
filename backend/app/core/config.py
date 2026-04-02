@@ -5,7 +5,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     app_name: str = Field(default="ChargeSafe SL API", alias="APP_NAME")
     app_version: str = Field(default="1.0.0", alias="APP_VERSION")
@@ -16,6 +20,14 @@ class Settings(BaseSettings):
     backend_cors_origins_raw: str = Field(
         default="http://localhost:5173",
         alias="BACKEND_CORS_ORIGINS",
+    )
+    secret_key: str = Field(
+        default="your-secret-key-change-in-production",
+        alias="SECRET_KEY",
+    )
+    algorithm: str = Field(
+        default="HS256",
+        alias="ALGORITHM",
     )
 
     @property

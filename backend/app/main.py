@@ -3,9 +3,18 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import router
 from app.core.config import settings
+from app.models import Base
+from app.db.session import engine
 
 
-app = FastAPI(title=settings.app_name, version=settings.app_version)
+# Create tables
+Base.metadata.create_all(bind=engine)
+
+app = FastAPI(
+    title=settings.app_name,
+    version=settings.app_version,
+    description="ChargeSafe SL Backend API - EV Charging Station Monitoring System"
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -16,3 +25,13 @@ app.add_middleware(
 )
 
 app.include_router(router, prefix="/api")
+
+
+@app.get("/")
+def root():
+    """Root endpoint."""
+    return {
+        "name": settings.app_name,
+        "version": settings.app_version,
+        "status": "running"
+    }
