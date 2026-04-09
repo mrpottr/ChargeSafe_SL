@@ -8,4 +8,5 @@ passlib[bcrypt]==1.7.4
 bcrypt==4.1.2
 PyJWT==2.8.0
 python-multipart==0.0.6
+google-genai==1.71.0
 

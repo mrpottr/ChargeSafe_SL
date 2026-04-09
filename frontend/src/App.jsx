@@ -6,6 +6,8 @@ import "./App.css";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8001/api";
 const AUTH_TOKEN_KEY = "chargesafe_auth_token";
+const LOW_RISK_MAX = 30;
+const MEDIUM_RISK_MAX = 70;
 
 // Fix Leaflet marker icon issues in React
 delete L.Icon.Default.prototype._getIconUrl;
@@ -28,45 +30,45 @@ const MapResizer = () => {
 
 const stations = [
   { 
-    id: 1, name: 'Colombo Fast Charge', loc: 'Colpetty', pos: [6.9147, 79.8512], score: 82, risk: 'safe', faults: 0, fw: 'v2.1.0 (15d)', cyber: 'LOW',
+    id: 1, name: 'Colombo Fast Charge', loc: 'Colpetty', pos: [6.9147, 79.8512], score: 82, faults: 0, fw: 'v2.1.0 (15d)', cyber: 'LOW',
     power: 'Stable',
     tempHistory: [32, 35, 38, 34, 33, 42, 45],
     scoreHistory: [
-      { date: '2025-05-25', score: 92, level: 'SAFE', trigger: 'System' },
-      { date: '2025-05-26', score: 90, level: 'SAFE', trigger: 'Auto' },
-      { date: '2025-05-27', score: 45, level: 'CRIT', trigger: 'Manual' },
-      { date: '2025-05-28', score: 55, level: 'WARN', trigger: 'System' },
-      { date: '2025-05-29', score: 78, level: 'SAFE', trigger: 'Manual' },
-      { date: '2025-05-30', score: 82, level: 'SAFE', trigger: 'Auto' }
+      { date: '2025-05-25', score: 92, level: 'HIGH', trigger: 'System' },
+      { date: '2025-05-26', score: 90, level: 'HIGH', trigger: 'Auto' },
+      { date: '2025-05-27', score: 45, level: 'MEDIUM', trigger: 'Manual' },
+      { date: '2025-05-28', score: 55, level: 'MEDIUM', trigger: 'System' },
+      { date: '2025-05-29', score: 78, level: 'HIGH', trigger: 'Manual' },
+      { date: '2025-05-30', score: 82, level: 'HIGH', trigger: 'Auto' }
     ]
   },
   { 
-    id: 2, name: 'Galle Rd Charger', loc: 'Galle', pos: [6.0333, 80.2167], score: 68, risk: 'warn', faults: 2, fw: 'v1.4.1 (60d)', cyber: 'MEDIUM',
+    id: 2, name: 'Galle Rd Charger', loc: 'Galle', pos: [6.0333, 80.2167], score: 68, faults: 2, fw: 'v1.4.1 (60d)', cyber: 'MEDIUM',
     power: 'Fluctuation',
     tempHistory: [30, 31, 33, 35, 40, 38, 39],
     scoreHistory: [
-      { date: '2025-05-25', score: 72, level: 'WARN', trigger: 'System' },
-      { date: '2025-05-26', score: 75, level: 'SAFE', trigger: 'Auto' },
-      { date: '2025-05-27', score: 65, level: 'WARN', trigger: 'Manual' },
-      { date: '2025-05-28', score: 68, level: 'WARN', trigger: 'Auto' }
+      { date: '2025-05-25', score: 72, level: 'HIGH', trigger: 'System' },
+      { date: '2025-05-26', score: 75, level: 'HIGH', trigger: 'Auto' },
+      { date: '2025-05-27', score: 65, level: 'MEDIUM', trigger: 'Manual' },
+      { date: '2025-05-28', score: 68, level: 'MEDIUM', trigger: 'Auto' }
     ]
   },
   { 
-    id: 3, name: 'Kandy Central EV', loc: 'Kandy', pos: [7.2906, 80.6337], score: 32, risk: 'danger', faults: 5, fw: 'v1.2.0 (180d)', cyber: 'CRITICAL',
+    id: 3, name: 'Kandy Central EV', loc: 'Kandy', pos: [7.2906, 80.6337], score: 32, faults: 5, fw: 'v1.2.0 (180d)', cyber: 'CRITICAL',
     power: 'Unstable',
     tempHistory: [45, 48, 52, 55, 60, 58, 62],
     scoreHistory: [
-      { date: '2025-05-25', score: 40, level: 'CRIT', trigger: 'System' },
-      { date: '2025-05-26', score: 35, level: 'CRIT', trigger: 'Auto' },
-      { date: '2025-05-27', score: 32, level: 'CRIT', trigger: 'Manual' }
+      { date: '2025-05-25', score: 40, level: 'MEDIUM', trigger: 'System' },
+      { date: '2025-05-26', score: 35, level: 'MEDIUM', trigger: 'Auto' },
+      { date: '2025-05-27', score: 32, level: 'MEDIUM', trigger: 'Manual' }
     ]
   },
   { 
-    id: 4, name: 'Negombo Hub', loc: 'Negombo', pos: [7.2008, 79.8737], score: 91, risk: 'safe', faults: 0, fw: 'v2.0.1', cyber: 'LOW',
+    id: 4, name: 'Negombo Hub', loc: 'Negombo', pos: [7.2008, 79.8737], score: 91, faults: 0, fw: 'v2.0.1', cyber: 'LOW',
     power: 'Stable',
   },
   { 
-    id: 5, name: 'Jaffna North', loc: 'Jaffna', pos: [9.6615, 80.0255], score: 78, risk: 'safe', faults: 1, fw: 'v1.8.0', cyber: 'LOW',
+    id: 5, name: 'Jaffna North', loc: 'Jaffna', pos: [9.6615, 80.0255], score: 78, faults: 1, fw: 'v1.8.0', cyber: 'LOW',
     power: 'Stable',
   }
 ];
@@ -104,10 +106,24 @@ const pinColors = {
   red: '#ff4444',
 };
 
-const getRiskColor = (risk) => {
-  if (risk === 'safe') return pinColors.green;
-  if (risk === 'warn') return pinColors.amber;
-  return pinColors.red;
+const getRiskMeta = (score = 0) => {
+  if (score <= LOW_RISK_MAX) {
+    return { key: 'low', badge: 'green', label: 'LOW RISK', shortLabel: 'LOW', color: pinColors.green };
+  }
+  if (score <= MEDIUM_RISK_MAX) {
+    return { key: 'medium', badge: 'amber', label: 'MEDIUM RISK', shortLabel: 'MEDIUM', color: pinColors.amber };
+  }
+  return { key: 'high', badge: 'red', label: 'HIGH RISK', shortLabel: 'HIGH', color: pinColors.red };
+};
+
+const getRiskColor = (score) => {
+  return getRiskMeta(score).color;
+};
+
+const getHistoryLevelMeta = (level) => {
+  if (level === 'LOW' || level === 'SAFE') return { badge: 'green', label: 'LOW' };
+  if (level === 'MEDIUM' || level === 'WARN') return { badge: 'amber', label: 'MEDIUM' };
+  return { badge: 'red', label: 'HIGH' };
 };
 
 const offlineResponses = {
@@ -115,6 +131,13 @@ const offlineResponses = {
   colombo: "Colombo Fast Charge (Colpetty, WP): Score 82/100 — Medium Risk. 2 faults detected. Authentication security flagged. Power stability is good. Cyber risk: MEDIUM.",
   safe: "Current safe stations include Negombo Hub (91/100) and Jaffna Charger (78/100). Both show low cyber risk and minimal fault counts.",
   critical: "Critical stations: Galle Rd Charger (38/100) — 7 faults, CRITICAL cyber risk. Avoid this station until maintenance is completed.",
+};
+
+const riskOfflineResponses = {
+  default: "I'm in offline mode. Cached data: The ChargeSafe SL network monitors 247 stations across Sri Lanka with real-time ML risk scoring. Low risk is 0-30, medium risk is 31-70, and high risk is 71-100.",
+  colombo: "Colombo Fast Charge (Colpetty, WP): Risk score 82/100 - High Risk. This usually means the station needs extra caution even if charging is still available. Cyber risk: MEDIUM.",
+  safe: "Lower-risk stations are the safest choices. Look for stations closer to the 0-30 range because a lower risk score means a safer station.",
+  critical: "High-risk stations are the ones to avoid first. A score in the 71-100 range usually points to overheating, instability, overload, or compatibility concerns.",
 };
 
 
@@ -159,6 +182,22 @@ const buildUsername = (fullName, email) => {
   return (base || "user").slice(0, 100);
 };
 
+const formatChatMessage = (text = "") => {
+  const escaped = text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+  return escaped
+    .replace(/\*\*\s*(.+?)\s*\*\*/g, "<strong>$1</strong>")
+    .replace(/__(.+?)__/g, "<strong>$1</strong>")
+    .replace(/\*\s*(.+?)\s*\*/g, "<em>$1</em>")
+    .replace(/_(.+?)_/g, "<em>$1</em>")
+    .replace(/\*\*/g, "")
+    .replace(/__/g, "")
+    .replace(/\n/g, "<br>");
+};
+
 function App() {
   const [user, setUser] = useState(null);
   const [authBusy, setAuthBusy] = useState(false);
@@ -173,12 +212,12 @@ function App() {
   const [lastSync, setLastSync] = useState('2025-06-01 11:30');
   const [toasts, setToasts] = useState([]);
   const [messages, setMessages] = useState([
-    { role: 'bot', text: "Hello! I'm the ChargeSafe AI assistant. I can help you check station safety scores, understand cyber risks, or answer questions about EV charging across Sri Lanka. What would you like to know?" }
+    { role: 'bot', text: "Hello! I'm the ChargeSafe AI assistant. I can help you understand station risk scores, cyber risks, or EV charging safety across Sri Lanka. What would you like to know?" }
   ]);
   const [isTyping, setIsTyping] = useState(false);
   const [clock, setClock] = useState("");
   const [notifications, setNotifications] = useState([
-    { id: 'notif-1', icon: '🚨', title: 'Safety Alert — Galle Rd Charger', msg: 'Station X flagged: Score dropped to 38/100. Authentication failure detected.', time: '2025-06-01 09:14', unread: true, type: 'danger' },
+    { id: 'notif-1', icon: '🚨', title: 'Risk Alert — Galle Rd Charger', msg: 'Station risk score rose to 82/100. Authentication failure detected.', time: '2025-06-01 09:14', unread: true, type: 'danger' },
     { id: 'notif-2', icon: '⚠️', title: 'Warning — Kandy Central EV Firmware', msg: 'Firmware version 1.9.2 is 8 months old. Update recommended.', time: '2025-06-01 08:02', unread: true, type: 'warn' },
     { id: 'notif-3', icon: '📋', title: 'Report #102 Status Update', msg: 'Your overheating report for Colpetty station is now under review by admin.', time: '2025-05-31 17:30', unread: true, type: 'info' },
     { id: 'notif-4', icon: '✅', title: 'Report #98 Resolved', msg: 'Your billing error report for Galle station has been resolved.', time: '2025-05-29 12:00', unread: false, type: 'success' },
@@ -198,12 +237,12 @@ function App() {
   // Settings State
   const [settings, setSettings] = useState({
     pushNotifications: true,
-    alertThreshold: 50,
+    alertThreshold: 70,
     unitsSystem: "Metric (°C, km)",
     language: "English",
     mapPinColorMode: "Risk Score (Green/Amber/Red)",
-    safeThreshold: 75,
-    warningThreshold: 50
+    safeThreshold: 30,
+    warningThreshold: 70
   });
 
   const chatMessagesEndRef = useRef(null);
@@ -484,7 +523,7 @@ function App() {
     setTimeout(() => {
       const newScore = Math.floor(Math.random() * 30) + 70;
       setMlScore(newScore);
-      addToast(`New score: ${newScore}/100`, newScore >= 75 ? 'success' : 'warn');
+      addToast(`New score: ${newScore}/100`, newScore <= LOW_RISK_MAX ? 'success' : 'warn');
     }, 1800);
   };
 
@@ -515,11 +554,11 @@ function App() {
     setMessages(prev => [...prev, { role: 'user', text: msg }]);
 
     if (offlineMode) {
-      let resp = offlineResponses.default;
+      let resp = riskOfflineResponses.default;
       const ml = msg.toLowerCase();
-      if (ml.includes('colombo')) resp = offlineResponses.colombo;
-      else if (ml.includes('safe') || ml.includes('safest')) resp = offlineResponses.safe;
-      else if (ml.includes('critical') || ml.includes('dangerous')) resp = offlineResponses.critical;
+      if (ml.includes('colombo')) resp = riskOfflineResponses.colombo;
+      else if (ml.includes('safe') || ml.includes('safest') || ml.includes('low risk')) resp = riskOfflineResponses.safe;
+      else if (ml.includes('critical') || ml.includes('dangerous') || ml.includes('high risk')) resp = riskOfflineResponses.critical;
       setTimeout(() => {
         setMessages(prev => [...prev, { role: 'bot', text: resp }]);
       }, 600);
@@ -528,34 +567,21 @@ function App() {
 
     setIsTyping(true);
     try {
-      // In a real app, this should be handled via a proxy or server-side function to hide keys
-      // For this demo, we'll simulate the AI if fetch fails or just show original logic
-      const stationContext = stations.map(s =>
-        `${s.name} (${s.loc}): ML Score ${s.score}/100, Cyber Risk ${s.cyber}, Faults ${s.faults}, Firmware Age ${s.fw}, Power ${s.power}`
-      ).join('\n');
-
-      // Note: This fetch will likely fail without an valid API key and CORS handling
-      // We keep it as per original logic but handle the error gracefully
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      const response = await fetch(`${API_BASE_URL}/chat`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'X-Api-Key': 'YOUR_API_KEY' // Needed for actual functionality
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'claude-3-sonnet-20240229',
-          max_tokens: 1000,
-          system: `You are ChargeSafe AI assistant... [truncated context]`,
-          messages: [{ role: 'user', content: msg }]
+          message: msg
         })
       });
 
       if (!response.ok) throw new Error("API failed");
       const data = await response.json();
-      const text = data.content?.find(b => b.type === 'text')?.text || 'Sorry, I could not get a response.';
-      setMessages(prev => [...prev, { role: 'bot', text }]);
+      setMessages(prev => [...prev, { role: 'bot', text: data.reply || 'Sorry, I could not get a response.' }]);
     } catch (err) {
-      setMessages(prev => [...prev, { role: 'bot', text: 'Connection error. Switching to Offline Mode or simulated response: Based on our data, Colombo Fast Charge is currently at 82/100 safety score.' }]);
+      setMessages(prev => [...prev, { role: 'bot', text: 'Connection error. Switching to Offline Mode or simulated response: Based on our data, Colombo Fast Charge is currently at 82/100 risk score, which is high risk.' }]);
     } finally {
       setIsTyping(false);
     }
@@ -831,7 +857,7 @@ function App() {
               <div className="live-ticker">
                 <div className="ticker-scroll">
                   {stations.concat(stations).map((s, i) => (
-                    <span key={i} className="ticker-chip">{s.name.toUpperCase()} <span className={s.risk === 'safe' ? 'green' : s.risk === 'warn' ? 'amber' : 'red'}>{s.risk.toUpperCase()} {s.score}/100</span></span>
+                    <span key={i} className="ticker-chip">{s.name.toUpperCase()} <span className={getRiskMeta(s.score).badge}>{getRiskMeta(s.score).shortLabel} {s.score}/100</span></span>
                   ))}
                 </div>
               </div>
@@ -858,7 +884,7 @@ function App() {
                       <Marker 
                         key={s.id} 
                         position={s.pos} 
-                        icon={getMarkerIcon(getRiskColor(s.risk))}
+                        icon={getMarkerIcon(getRiskColor(s.score))}
                         eventHandlers={{ click: () => openStation(s.id) }}
                       />
                     ))}
@@ -887,7 +913,7 @@ function App() {
                     </div>
                     <div className="card stat-card">
                       <div className="stat-num red" style={{ fontSize: '20px' }}>21</div>
-                      <div className="stat-label">Critical Risks</div>
+                      <div className="stat-label">High-Risk Stations</div>
                     </div>
                   </div>
 
@@ -951,7 +977,7 @@ function App() {
                     <tr>
                       <th>Station</th>
                       <th>Location</th>
-                      <th>ML Score</th>
+                      <th>Risk Score</th>
                       <th>Cyber Risk</th>
                       <th>Faults</th>
                       <th>Status</th>
@@ -963,10 +989,10 @@ function App() {
                       <tr key={s.id}>
                         <td style={{ fontWeight: 600, color: 'var(--txt)' }}>{s.name}</td>
                         <td>{s.loc}</td>
-                        <td><span style={{ color: s.risk === 'safe' ? 'var(--green)' : s.risk === 'warn' ? 'var(--amber)' : 'var(--red)', fontWeight: 700 }}>{s.score}/100</span></td>
-                        <td><span className={`badge badge-${s.risk === 'safe' ? 'green' : s.risk === 'warn' ? 'amber' : 'red'}`}>{s.cyber}</span></td>
+                        <td><span style={{ color: getRiskMeta(s.score).color, fontWeight: 700 }}>{s.score}/100</span></td>
+                        <td><span className={`badge badge-${getRiskMeta(s.score).badge}`}>{s.cyber}</span></td>
                         <td className="mono">{s.faults}</td>
-                        <td><span className={`badge badge-${s.risk === 'safe' ? 'green' : s.risk === 'warn' ? 'amber' : 'red'}`}>{s.risk === 'safe' ? 'SAFE' : s.risk === 'warn' ? 'WARN' : 'CRIT'}</span></td>
+                        <td><span className={`badge badge-${getRiskMeta(s.score).badge}`}>{getRiskMeta(s.score).label}</span></td>
                         <td><button className="btn btn-sm btn-primary" onClick={() => openStation(s.id)}>DETAILS</button></td>
                       </tr>
                     ))}
@@ -999,9 +1025,9 @@ function App() {
                     onChange={(e) => setMapFilter(e.target.value)}
                   >
                     <option value="all">All Risks</option>
-                    <option value="safe">Safe Only</option>
-                    <option value="warn">Warnings</option>
-                    <option value="danger">Critical</option>
+                    <option value="low">Low Risk</option>
+                    <option value="medium">Medium Risk</option>
+                    <option value="high">High Risk</option>
                   </select>
                 </div>
               </div>
@@ -1020,20 +1046,20 @@ function App() {
                 />
                 <MapResizer />
                 {stations
-                  .filter(s => mapFilter === 'all' || s.risk === mapFilter || (mapFilter === 'danger' && s.risk === 'danger'))
+                  .filter(s => mapFilter === 'all' || getRiskMeta(s.score).key === mapFilter)
                   .filter(s => s.name.toLowerCase().includes(mapSearch.toLowerCase()) || s.loc.toLowerCase().includes(mapSearch.toLowerCase()))
                   .map(s => (
                     <Marker 
                       key={s.id} 
                       position={s.pos} 
-                      icon={getMarkerIcon(getRiskColor(s.risk))}
+                      icon={getMarkerIcon(getRiskColor(s.score))}
                     >
                       <Popup>
                         <div className="map-popup">
                           <strong style={{ color: '#000', fontSize: '13px' }}>{s.name}</strong><br/>
                           <span style={{ color: '#444', fontSize: '11px' }}>{s.loc}</span><br/>
                           <div style={{ marginTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ color: s.risk === 'safe' ? '#00b85a' : s.risk === 'warn' ? '#cc8f00' : '#cc2222', fontWeight: 700, fontSize: '14px' }}>{s.score}/100</span>
+                            <span style={{ color: getRiskColor(s.score), fontWeight: 700, fontSize: '14px' }}>{s.score}/100</span>
                             <button className="btn btn-sm btn-primary" style={{ padding: '4px 8px', fontSize: '9px' }} onClick={() => openStation(s.id)}>DETAILS</button>
                           </div>
                         </div>
@@ -1058,10 +1084,10 @@ function App() {
               </div>
               <div className="grid2 mb16">
                 <div className="card">
-                  <div className="card-header"><span className="card-title">Station Info</span><span className={`badge badge-${currentStation.risk === 'safe' ? 'green' : currentStation.risk === 'warn' ? 'amber' : 'red'}`}>{currentStation.risk.toUpperCase()} RISK</span></div>
+                  <div className="card-header"><span className="card-title">Station Info</span><span className={`badge badge-${getRiskMeta(currentStation.score).badge}`}>{getRiskMeta(currentStation.score).label}</span></div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    <div className="flex-between"><span style={{ fontSize: '12px', color: 'var(--txt3)' }}>Safety Score</span><span className={`orb text-${currentStation.risk === 'safe' ? 'green' : currentStation.risk === 'warn' ? 'amber' : 'red'}`} style={{ fontSize: '20px', fontWeight: 700 }}>{currentStation.score}/100</span></div>
-                    <div className="risk-bar-wrap"><div className={`risk-bar-fill ${currentStation.risk === 'safe' ? 'green' : currentStation.risk === 'warn' ? 'amber' : 'red'}`} style={{ width: `${currentStation.score}%` }}></div></div>
+                    <div className="flex-between"><span style={{ fontSize: '12px', color: 'var(--txt3)' }}>Risk Score</span><span className={`orb text-${getRiskMeta(currentStation.score).badge}`} style={{ fontSize: '20px', fontWeight: 700 }}>{currentStation.score}/100</span></div>
+                    <div className="risk-bar-wrap"><div className={`risk-bar-fill ${getRiskMeta(currentStation.score).badge}`} style={{ width: `${currentStation.score}%` }}></div></div>
                     <div className="flex-between"><span style={{ fontSize: '12px', color: 'var(--txt3)' }}>Fault Count</span><span className="mono">{currentStation.faults} faults</span></div>
                     <div className="flex-between"><span style={{ fontSize: '12px', color: 'var(--txt3)' }}>Firmware Age</span><span className="mono">{currentStation.fw}</span></div>
                     <div className="flex-between"><span style={{ fontSize: '12px', color: 'var(--txt3)' }}>Power Stability</span><span className="mono text-green">{currentStation.power}</span></div>
@@ -1163,18 +1189,18 @@ function App() {
               </div>
               <div className="grid2 mb16">
                 <div className="card">
-                  <div className="card-header"><span className="card-title">{currentStation.name} — Risk Score</span><span className={`badge badge-${mlScore >= 75 ? 'green' : mlScore >= 50 ? 'amber' : 'red'}`}>{mlScore >= 75 ? 'SAFE' : mlScore >= 50 ? 'MEDIUM RISK' : 'HIGH RISK'}</span></div>
+                  <div className="card-header"><span className="card-title">{currentStation.name} — Risk Score</span><span className={`badge badge-${getRiskMeta(mlScore).badge}`}>{getRiskMeta(mlScore).label}</span></div>
                   <div className="gauge-wrap">
                     <svg className="gauge-svg" viewBox="0 0 180 110">
                       <path d="M 18 95 A 72 72 0 0 1 162 95" fill="none" stroke="#1a3050" strokeWidth="11" strokeLinecap="round" />
-                      <path d="M 18 95 A 72 72 0 0 1 162 95" fill="none" stroke={mlScore >= 75 ? "var(--green)" : mlScore >= 50 ? "var(--amber)" : "var(--red)"} strokeWidth="11" strokeLinecap="round" strokeDasharray="226" strokeDashoffset={226 - (mlScore / 100) * 226} style={{ transition: 'stroke-dashoffset 1.2s ease, stroke .4s ease' }} />
+                      <path d="M 18 95 A 72 72 0 0 1 162 95" fill="none" stroke={getRiskMeta(mlScore).badge === 'green' ? "var(--green)" : getRiskMeta(mlScore).badge === 'amber' ? "var(--amber)" : "var(--red)"} strokeWidth="11" strokeLinecap="round" strokeDasharray="226" strokeDashoffset={226 - (mlScore / 100) * 226} style={{ transition: 'stroke-dashoffset 1.2s ease, stroke .4s ease' }} />
                     </svg>
-                    <div className={`gauge-score ${mlScore >= 75 ? 'green' : mlScore >= 50 ? 'amber' : 'red'}`}>{mlScore}</div>
-                    <div className="gauge-sub">/ 100 — ML SAFETY SCORE</div>
+                    <div className={`gauge-score ${getRiskMeta(mlScore).badge}`}>{mlScore}</div>
+                    <div className="gauge-sub">/ 100 — ML RISK SCORE</div>
                   </div>
                 </div>
                 <div className="card">
-                  <div className="card-header"><span className="card-title">Score Factors (FR-22)</span></div>
+                  <div className="card-header"><span className="card-title">Risk Factors (FR-22)</span></div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <div className="factor-row"><span className="factor-label">Temp History</span><div className="factor-bar-wrap"><div className="factor-fill pass" style={{ width: '95%' }}></div></div><span className="factor-status pass">PASS</span></div>
                     <div className="factor-row"><span className="factor-label">Fault Count</span><div className="factor-bar-wrap"><div className={`factor-fill ${currentStation.faults < 3 ? 'pass' : 'warn'}`} style={{ width: '60%' }}></div></div><span className={`factor-status ${currentStation.faults < 3 ? 'pass' : 'warn'}`}>{currentStation.faults < 3 ? 'PASS' : 'WARN'}</span></div>
@@ -1188,7 +1214,7 @@ function App() {
 
               {/* SCORE HISTORY TABLE (FR-24) */}
               <div className="card">
-                <div className="card-header"><span className="card-title">Score History (Last 6 Readings)</span></div>
+                <div className="card-header"><span className="card-title">Risk Score History (Last 6 Readings)</span></div>
                 <table className="data-table">
                   <thead>
                     <tr><th>Date</th><th>Score</th><th>Level</th><th>Trigger</th></tr>
@@ -1198,7 +1224,7 @@ function App() {
                       <tr key={i}>
                         <td className="mono">{h.date}</td>
                         <td style={{ fontWeight: 600 }}>{h.score}/100</td>
-                        <td><span className={`badge badge-${h.level === 'SAFE' ? 'green' : h.level === 'WARN' ? 'amber' : 'red'}`}>{h.level}</span></td>
+                        <td><span className={`badge badge-${getHistoryLevelMeta(h.level).badge}`}>{getHistoryLevelMeta(h.level).label}</span></td>
                         <td className="mono">{h.trigger}</td>
                       </tr>
                     ))}
@@ -1229,7 +1255,7 @@ function App() {
                     {messages.map((m, i) => (
                       <div key={i} className={`chat-msg ${m.role}`}>
                         <div className={`chat-avatar ${m.role}`}>{m.role === 'bot' ? 'AI' : '👤'}</div>
-                        <div className="chat-bubble" dangerouslySetInnerHTML={{ __html: m.text.replace(/\n/g, '<br>') }}></div>
+                        <div className="chat-bubble" dangerouslySetInnerHTML={{ __html: formatChatMessage(m.text) }}></div>
                       </div>
                     ))}
                     {isTyping && (
@@ -1248,9 +1274,9 @@ function App() {
                 <div className="card">
                   <div className="card-header"><span className="card-title">Quick Questions</span></div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <button className="btn btn-ghost btn-sm" onClick={() => quickChat('Is Colombo Fast Charge safe?')}>Is Colombo Fast Charge safe?</button>
-                    <button className="btn btn-ghost btn-sm" onClick={() => quickChat('Which stations are critical?')}>Which stations have critical cyber risk?</button>
-                    <button className="btn btn-ghost btn-sm" onClick={() => quickChat('Safest stations in Western Province?')}>Safest stations in Western Province?</button>
+                    <button className="btn btn-ghost btn-sm" onClick={() => quickChat('Why is Colombo Fast Charge high risk?')}>Why is Colombo Fast Charge high risk?</button>
+                    <button className="btn btn-ghost btn-sm" onClick={() => quickChat('Which stations are high risk right now?')}>Which stations are high risk right now?</button>
+                    <button className="btn btn-ghost btn-sm" onClick={() => quickChat('Which stations are lowest risk in Western Province?')}>Which stations are lowest risk in Western Province?</button>
                   </div>
                 </div>
 
@@ -1265,7 +1291,7 @@ function App() {
                           <tr key={s.id}>
                             <td>{s.name}</td>
                             <td className="mono">{s.score}</td>
-                            <td><span className={`badge badge-${s.risk === 'safe' ? 'green' : s.risk === 'warn' ? 'amber' : 'red'}`} style={{ fontSize: '9px' }}>{s.risk.toUpperCase()}</span></td>
+                            <td><span className={`badge badge-${getRiskMeta(s.score).badge}`} style={{ fontSize: '9px' }}>{getRiskMeta(s.score).shortLabel}</span></td>
                           </tr>
                         ))}
                       </tbody>
@@ -1415,7 +1441,7 @@ function App() {
                   <div className="form-group">
                     <label className="switch-row" style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
                       <input type="checkbox" id="inc-rescore" />
-                      <span style={{ fontSize: '12px', color: 'var(--txt2)' }}>Trigger ML Safety Rescore on submission</span>
+                      <span style={{ fontSize: '12px', color: 'var(--txt2)' }}>Trigger ML Risk Rescore on submission</span>
                     </label>
                   </div>
 
@@ -1502,7 +1528,7 @@ function App() {
                   <div className="card stat-card"><div className="stat-num cyan">247</div><div className="stat-label">Total Stations</div></div>
                   <div className="card stat-card"><div className="stat-num amber">12</div><div className="stat-label">Pending Reports</div></div>
                   <div className="card stat-card"><div className="stat-num green">1,402</div><div className="stat-label">Total Users</div></div>
-                  <div className="card stat-card"><div className="stat-num red">21</div><div className="stat-label">Critical Stations</div></div>
+                  <div className="card stat-card"><div className="stat-num red">21</div><div className="stat-label">High-Risk Stations</div></div>
                 </div>
               )}
 
@@ -1517,7 +1543,7 @@ function App() {
                           <td className="mono">{s.id}</td>
                           <td style={{ fontWeight: 600 }}>{s.name}</td>
                           <td>{s.loc}</td>
-                          <td><span className={`badge badge-${s.risk === 'safe' ? 'green' : s.risk === 'warn' ? 'amber' : 'red'}`}>{s.risk.toUpperCase()}</span></td>
+                          <td><span className={`badge badge-${getRiskMeta(s.score).badge}`}>{getRiskMeta(s.score).shortLabel}</span></td>
                           <td style={{ display: 'flex', gap: '4px' }}>
                             <button className="btn btn-sm btn-ghost">EDIT</button>
                             <button className="btn btn-sm btn-ghost text-red" onClick={() => window.confirm('Delete station?') && addToast('success', 'Station deleted')}>DEL</button>
@@ -1603,29 +1629,29 @@ function App() {
                       </label>
                     </div>
                     <div className="form-group" style={{ marginTop: '20px' }}>
-                      <label className="form-label">Alert Threshold Score</label>
+                      <label className="form-label">High-Risk Alert Threshold</label>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                         <input type="range" className="range-slider" min="0" max="100" value={settings.alertThreshold} onChange={(e) => updateSetting('alertThreshold', parseInt(e.target.value))} />
                         <div className="threshold-val">{settings.alertThreshold}</div>
                       </div>
-                      <div className="setting-desc">Alert when station score drops below this value</div>
+                      <div className="setting-desc">Alert when a station risk score rises above this value</div>
                     </div>
                   </div>
 
                   <div className="card">
                     <div className="card-header"><span className="card-title">Risk Thresholds</span></div>
                     <div className="form-group">
-                      <label className="form-label">Safe Threshold (Default: 75)</label>
+                      <label className="form-label">Low Risk Threshold (Default: 30)</label>
                       <input type="number" className="form-input" value={settings.safeThreshold} onChange={(e) => updateSetting('safeThreshold', parseInt(e.target.value))} />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Warning Threshold (Default: 50)</label>
+                      <label className="form-label">Medium Risk Threshold (Default: 70)</label>
                       <input type="number" className="form-input" value={settings.warningThreshold} onChange={(e) => updateSetting('warningThreshold', parseInt(e.target.value))} />
                     </div>
                     <div style={{ marginTop: '12px', fontSize: '11px', fontFamily: 'Fira Code, monospace' }}>
-                      <div className="text-green">75-100 — SAFE</div>
-                      <div className="text-amber">50-74 — WARNING</div>
-                      <div className="text-red">0-49 — CRITICAL</div>
+                      <div className="text-green">0-30 — LOW RISK</div>
+                      <div className="text-amber">31-70 — MEDIUM RISK</div>
+                      <div className="text-red">71-100 — HIGH RISK</div>
                     </div>
                     <button className="btn btn-primary" style={{ width: '100%', marginTop: '24px' }} onClick={saveSettings}>Save Settings</button>
                   </div>
@@ -1667,7 +1693,7 @@ function App() {
                         <tr><td>Group</td><td className="mono">Group 28 - Week 05</td></tr>
                         <tr><td>ML Model</td><td className="mono">Risk Scorer v2.3</td></tr>
                         <tr><td>Cyber Engine</td><td className="mono">IEC 62443 + OWASP IoT</td></tr>
-                        <tr><td>AI Chatbot</td><td className="mono">Claude (Anthropic)</td></tr>
+                        <tr><td>AI Chatbot</td><td className="mono">Gemini</td></tr>
                         <tr><td>Last Sync</td><td className="mono">{lastSync}</td></tr>
                       </tbody>
                     </table>

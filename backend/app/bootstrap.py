@@ -110,7 +110,12 @@ def seed_initial_data(db: Session) -> None:
         return
 
     now = datetime.utcnow()
-    level_map = {82: "SAFE", 68: "WARN", 32: "CRIT", 91: "SAFE", 78: "SAFE"}
+    def level_for_score(score: float) -> str:
+        if score <= 30:
+            return "LOW"
+        if score <= 70:
+            return "MEDIUM"
+        return "HIGH"
 
     for item in SEED_STATIONS:
         station = ChargingStation(**item, last_scored_at=now)
@@ -130,7 +135,7 @@ def seed_initial_data(db: Session) -> None:
                 ScoreHistory(
                     station_id=station.id,
                     score=score,
-                    level=level_map.get(base_score, "WARN"),
+                    level=level_for_score(score),
                     trigger="System" if days_ago else "Auto",
                     recorded_at=recorded_at,
                 )

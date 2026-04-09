@@ -6,7 +6,7 @@ A FastAPI-based backend for the ChargeSafe SL EV Charging Station Monitoring Sys
 
 ### Core Features
 - **User Management**: Registration, login, and profile management
-- **Charging Station Monitoring**: Real-time station status, safety scores, and cyber risk assessment
+- **Charging Station Monitoring**: Real-time station status, risk scores, and cyber risk assessment
 - **Incident Reporting**: Users can report issues (overheating, billing errors, network issues, etc.)
 - **Notifications**: Real-time alerts for critical station issues
 - **Chat History**: Persistent storage of user-assistant conversations
@@ -20,7 +20,7 @@ A FastAPI-based backend for the ChargeSafe SL EV Charging Station Monitoring Sys
 
 ### Data Models
 - **Users**: With roles (admin/standard_user)
-- **Charging Stations**: With safety scores, cyber risk levels, and performance metrics
+- **Charging Stations**: With risk scores, cyber risk levels, and performance metrics
 - **Reports**: Incident reports from users with severity levels
 - **Notifications**: Real-time alerts with read/unread status
 - **Messages**: Chat history for persistence

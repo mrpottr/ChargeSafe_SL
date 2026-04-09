@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(".env", "../.env"),
         env_file_encoding="utf-8",
         extra="ignore",
     )
@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     secret_key: str = Field(
         default="your-secret-key-change-in-production",
         alias="SECRET_KEY",
+    )
+    google_api_key: str = Field(
+        default="",
+        alias="GOOGLE_API_KEY",
     )
     algorithm: str = Field(
         default="HS256",

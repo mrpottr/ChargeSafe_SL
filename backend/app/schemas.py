@@ -67,7 +67,8 @@ class ChargingStationResponse(BaseModel):
     city: Optional[str]
     address: Optional[str]
     status: StationStatus
-    safety_score: Optional[float]
+    risk_score: Optional[float]
+    risk_level: Optional[str]
     cyber_risk_level: Optional[CyberRiskLevel]
     firmware_version: Optional[str]
     firmware_age_days: Optional[int]
@@ -96,7 +97,7 @@ class ChargingStationCreateUpdate(BaseModel):
     address: Optional[str] = None
     operator: Optional[str] = None
     status: Optional[StationStatus] = StationStatus.unknown
-    safety_score: Optional[float] = Field(None, ge=0, le=100)
+    risk_score: Optional[float] = Field(None, ge=0, le=100)
     cyber_risk_level: Optional[CyberRiskLevel] = None
     firmware_version: Optional[str] = None
     temperature_celsius: Optional[float] = None
@@ -204,6 +205,14 @@ class TokenResponse(BaseModel):
 
 class MessageOnlyResponse(BaseModel):
     message: str
+
+
+class ChatRequest(BaseModel):
+    message: str = Field(..., min_length=1, max_length=4000)
+
+
+class ChatResponse(BaseModel):
+    reply: str
 
 # ============== Score History Schemas ==============
 class ScoreHistoryResponse(BaseModel):

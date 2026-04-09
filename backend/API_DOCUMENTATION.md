@@ -81,8 +81,8 @@ Authorization: Bearer <token>
 Query Parameters:
 - city (optional): Filter by city name
 - status_filter (optional): operational, faulty, offline, unknown, maintenance
-- min_score (optional): Minimum safety score (0-100)
-- max_score (optional): Maximum safety score (0-100)
+- min_score (optional): Minimum risk score (0-100)
+- max_score (optional): Maximum risk score (0-100)
 - limit (optional): Max results (default: 50, max: 100)
 
 Response (200):
@@ -95,7 +95,7 @@ Response (200):
     "city": "Colombo",
     "address": "Colpetty",
     "status": "operational",
-    "safety_score": 82.0,
+    "risk_score": 82.0,
     "cyber_risk_level": "LOW",
     "firmware_version": "v2.1.0",
     "firmware_age_days": 15,

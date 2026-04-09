@@ -79,7 +79,7 @@ class ChargingStation(Base):
     connector_types = Column(String(255), nullable=True)
     charging_power_kw = Column(Float, nullable=True)
     status = Column(Enum(StationStatus), default=StationStatus.unknown, nullable=False, index=True)
-    safety_score = Column(Float, nullable=True)  # 0-100
+    safety_score = Column(Float, nullable=True)  # Stored as risk score from 0-100
     cyber_risk_level = Column(Enum(CyberRiskLevel), nullable=True)
     firmware_version = Column(String(50), nullable=True)
     firmware_age_days = Column(Integer, nullable=True)
@@ -93,6 +93,19 @@ class ChargingStation(Base):
     reports = relationship("Report", back_populates="station")
     score_history = relationship("ScoreHistory", back_populates="station", cascade="all, delete-orphan")
     temperature_history = relationship("TemperatureHistory", back_populates="station", cascade="all, delete-orphan")
+
+    @property
+    def risk_score(self):
+        return self.safety_score
+
+    @property
+    def risk_level(self):
+        score = self.safety_score if self.safety_score is not None else 0
+        if score <= 30:
+            return "LOW"
+        if score <= 70:
+            return "MEDIUM"
+        return "HIGH"
 
 
 class Report(Base):
@@ -145,12 +158,12 @@ class UserSettings(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), unique=True, nullable=False, index=True)
     push_notifications_enabled = Column(Boolean, default=True)
-    alert_threshold = Column(Integer, default=50)  # Safety score threshold for alerts
+    alert_threshold = Column(Integer, default=70)  # Risk score threshold for alerts
     units_system = Column(String(50), default="Metric (°C, km)")
     language = Column(String(50), default="English")
     map_pin_color_mode = Column(String(100), default="Risk Score (Green/Amber/Red)")
-    safe_threshold = Column(Integer, default=75)
-    warning_threshold = Column(Integer, default=50)
+    safe_threshold = Column(Integer, default=30)
+    warning_threshold = Column(Integer, default=70)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
@@ -163,7 +176,7 @@ class ScoreHistory(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     station_id = Column(UUID(as_uuid=True), ForeignKey("charging_stations.id"), nullable=False, index=True)
     score = Column(Float, nullable=False)
-    level = Column(String(20), nullable=False)  # 'SAFE', 'WARN', 'CRIT'
+    level = Column(String(20), nullable=False)  # 'LOW', 'MEDIUM', 'HIGH'
     trigger = Column(String(50), nullable=False)  # 'System', 'Auto', 'Manual'
     recorded_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
