@@ -17,12 +17,14 @@ from app.schemas import (
     ReportCreate, ReportUpdate, ReportResponse, ReportDetailResponse,
     NotificationResponse, NotificationMarkRead,
     MessageCreate, MessageResponse,
-    UserSettingsResponse, UserSettingsUpdate
+    UserSettingsResponse, UserSettingsUpdate,
+    ChatRequest, ChatResponse
 )
 from app.core.security import (
     hash_password, verify_password, create_access_token,
     get_current_user, get_current_admin
 )
+from app.services.gemini_chat import generate_chat_reply
 
 router = APIRouter()
 
@@ -40,6 +42,25 @@ def readiness_check(db: Session = Depends(get_db)):
     """Readiness check endpoint."""
     db.execute(text("SELECT 1"))
     return {"status": "ready"}
+
+
+@router.post("/chat", response_model=ChatResponse)
+def chat_with_ai(payload: ChatRequest):
+    """Generate a chatbot reply using Gemini."""
+    try:
+        reply = generate_chat_reply(payload.message.strip())
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(exc)
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="AI service unavailable"
+        ) from exc
+
+    return {"reply": reply}
 
 
 # ============== Authentication ==============
@@ -136,7 +157,7 @@ def list_stations(
     max_score: Optional[float] = Query(None),
     limit: int = Query(50, le=100)
 ):
-    """List all charging stations with optional filters."""
+    """List all charging stations with optional risk-score filters."""
     query = db.query(ChargingStation)
     
     if city:
@@ -174,7 +195,10 @@ def create_station(
     db: Session = Depends(get_db)
 ):
     """Create a new charging station (admin only)."""
-    station = ChargingStation(**request.model_dump())
+    payload = request.model_dump()
+    if "risk_score" in payload:
+        payload["safety_score"] = payload.pop("risk_score")
+    station = ChargingStation(**payload)
     db.add(station)
     db.commit()
     db.refresh(station)
@@ -196,7 +220,11 @@ def update_station(
             detail="Station not found"
         )
     
-    for key, value in request.model_dump(exclude_unset=True).items():
+    payload = request.model_dump(exclude_unset=True)
+    if "risk_score" in payload:
+        payload["safety_score"] = payload.pop("risk_score")
+
+    for key, value in payload.items():
         setattr(station, key, value)
     
     station.updated_at = datetime.utcnow()

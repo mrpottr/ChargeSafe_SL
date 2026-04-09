@@ -1,6 +1,6 @@
 /* SPLASH SCREEN */
 #splash-screen{
-  position:fixed;inset:0;z-index:260;
+  position:fixed;inset:0;z-index:5000;
   background:var(--bg0);
   display:flex;align-items:center;justify-content:center;
   overflow:hidden;
@@ -91,7 +91,7 @@ body{font-family:'Barlow',sans-serif;background:var(--bg0);color:var(--txt);disp
 
 /* ─── AUTH WRAPPER ─── */
 #auth-wrapper{
-  position:fixed;inset:0;z-index:200;
+  position:fixed;inset:0;z-index:4000;
   background:var(--bg0);
   display:flex;align-items:center;justify-content:center;
   background-image:
