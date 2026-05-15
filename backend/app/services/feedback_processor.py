@@ -4,6 +4,10 @@ from sqlalchemy.orm import Session
 
 from app.models import ChargingStation, Report, ScoreHistory
 from app.services.data_loader_service import DataLoaderService
+<<<<<<< HEAD
+=======
+from app.services.risk_state_observer import notify_on_risk_state_change
+>>>>>>> 53d3f3e (did some modifications and testings)
 from app.services.risk_score_ml_service import risk_scorer
 
 class FeedbackProcessor:
@@ -25,6 +29,10 @@ class FeedbackProcessor:
                 return
             
             # STEP 1 & 2: Calculate New Score & Update Database
+<<<<<<< HEAD
+=======
+            previous_risk_score = station.safety_score
+>>>>>>> 53d3f3e (did some modifications and testings)
             features_dict = DataLoaderService.map_database_to_features(db, station, report)
             new_risk_score = risk_scorer.calculate_latest_risk_score(features_dict)
             
@@ -50,6 +58,17 @@ class FeedbackProcessor:
             
             # Optionally sync Cyber Risk level to the overall prediction to reflect it in the UI mapping.
             station.cyber_risk_level = new_risk_level
+<<<<<<< HEAD
+=======
+
+            notify_on_risk_state_change(
+                db,
+                station_id=station.id,
+                old_score=previous_risk_score,
+                new_score=new_risk_score,
+                timestamp=station.last_scored_at,
+            )
+>>>>>>> 53d3f3e (did some modifications and testings)
             
             db.commit()
             print(f"FeedbackProcessor: Station {station_id} ML risk score updated to {new_risk_score}")

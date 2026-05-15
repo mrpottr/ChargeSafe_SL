@@ -1,3 +1,4 @@
+import os
 from datetime import datetime, timedelta
 
 from sqlalchemy.orm import Session
@@ -8,108 +9,142 @@ from app.models import (
     ScoreHistory,
     StationStatus,
     TemperatureHistory,
+    User,
+    UserRole,
 )
+from app.core.security import hash_password
+
+
+REMOVED_STATION_NAMES = {
+    "Colombo Fast Charge",
+    "Galle Rd Charger",
+    "Kandy Central EV",
+    "Negombo Hub",
+    "Jaffna North",
+}
 
 
 SEED_STATIONS = [
     {
-        "name": "Colombo Fast Charge",
-        "latitude": 6.9147,
-        "longitude": 79.8512,
-        "city": "Colpetty",
-        "address": "Colpetty, Colombo",
-        "operator": "ChargeSafe SL",
+        "name": "DEMO Colombo High Risk 01",
+        "latitude": 6.9123,
+        "longitude": 79.8567,
+        "city": "Colombo",
+        "address": "Demo Address 1",
+        "operator": "ChargeSafe Demo",
         "connector_types": "CCS2, Type 2",
         "charging_power_kw": 120,
-        "status": StationStatus.operational,
-        "safety_score": 82,
-        "cyber_risk_level": CyberRiskLevel.low,
-        "firmware_version": "v2.1.0",
-        "firmware_age_days": 15,
-        "temperature_celsius": 33,
-        "power_status": "Stable",
-        "fault_count": 0,
-    },
-    {
-        "name": "Galle Rd Charger",
-        "latitude": 6.0333,
-        "longitude": 80.2167,
-        "city": "Galle",
-        "address": "Galle Road, Galle",
-        "operator": "ChargeSafe SL",
-        "connector_types": "CCS2",
-        "charging_power_kw": 60,
         "status": StationStatus.faulty,
-        "safety_score": 68,
-        "cyber_risk_level": CyberRiskLevel.medium,
-        "firmware_version": "v1.4.1",
-        "firmware_age_days": 60,
-        "temperature_celsius": 39,
-        "power_status": "Fluctuation",
-        "fault_count": 2,
-    },
-    {
-        "name": "Kandy Central EV",
-        "latitude": 7.2906,
-        "longitude": 80.6337,
-        "city": "Kandy",
-        "address": "Kandy Central, Kandy",
-        "operator": "ChargeSafe SL",
-        "connector_types": "CCS2, CHAdeMO",
-        "charging_power_kw": 50,
-        "status": StationStatus.maintenance,
-        "safety_score": 32,
-        "cyber_risk_level": CyberRiskLevel.critical,
-        "firmware_version": "v1.2.0",
-        "firmware_age_days": 180,
-        "temperature_celsius": 58,
+        "safety_score": 88,
+        "cyber_risk_level": CyberRiskLevel.high,
+        "firmware_version": "v1.0.2",
+        "firmware_age_days": 365,
+        "temperature_celsius": 52,
         "power_status": "Unstable",
         "fault_count": 5,
     },
     {
-        "name": "Negombo Hub",
-        "latitude": 7.2008,
-        "longitude": 79.8737,
-        "city": "Negombo",
-        "address": "Negombo Hub, Negombo",
-        "operator": "ChargeSafe SL",
-        "connector_types": "CCS2, Type 2",
+        "name": "DEMO Kandy High Risk 02",
+        "latitude": 7.2911,
+        "longitude": 80.6350,
+        "city": "Kandy",
+        "address": "Demo Address 2",
+        "operator": "ChargeSafe Demo",
+        "connector_types": "CCS2, CHAdeMO",
         "charging_power_kw": 90,
+        "status": StationStatus.maintenance,
+        "safety_score": 81,
+        "cyber_risk_level": CyberRiskLevel.high,
+        "firmware_version": "v1.1.0",
+        "firmware_age_days": 320,
+        "temperature_celsius": 49,
+        "power_status": "Fluctuation",
+        "fault_count": 4,
+    },
+    {
+        "name": "DEMO Galle Medium Risk 01",
+        "latitude": 6.0310,
+        "longitude": 80.2175,
+        "city": "Galle",
+        "address": "Demo Address 3",
+        "operator": "ChargeSafe Demo",
+        "connector_types": "CCS2",
+        "charging_power_kw": 60,
         "status": StationStatus.operational,
-        "safety_score": 91,
+        "safety_score": 62,
+        "cyber_risk_level": CyberRiskLevel.medium,
+        "firmware_version": "v1.8.0",
+        "firmware_age_days": 180,
+        "temperature_celsius": 38,
+        "power_status": "Stable",
+        "fault_count": 2,
+    },
+    {
+        "name": "DEMO Kurunegala Medium Risk 02",
+        "latitude": 7.4862,
+        "longitude": 80.3647,
+        "city": "Kurunegala",
+        "address": "Demo Address 4",
+        "operator": "ChargeSafe Demo",
+        "connector_types": "CCS2, Type 2",
+        "charging_power_kw": 50,
+        "status": StationStatus.operational,
+        "safety_score": 45,
+        "cyber_risk_level": CyberRiskLevel.medium,
+        "firmware_version": "v1.9.1",
+        "firmware_age_days": 120,
+        "temperature_celsius": 35,
+        "power_status": "Stable",
+        "fault_count": 1,
+    },
+    {
+        "name": "DEMO Jaffna Low Risk 01",
+        "latitude": 9.6680,
+        "longitude": 80.0201,
+        "city": "Jaffna",
+        "address": "Demo Address 5",
+        "operator": "ChargeSafe Demo",
+        "connector_types": "CCS2",
+        "charging_power_kw": 75,
+        "status": StationStatus.operational,
+        "safety_score": 22,
         "cyber_risk_level": CyberRiskLevel.low,
-        "firmware_version": "v2.0.1",
-        "firmware_age_days": 25,
-        "temperature_celsius": 31,
+        "firmware_version": "v2.3.0",
+        "firmware_age_days": 45,
+        "temperature_celsius": 29,
         "power_status": "Stable",
         "fault_count": 0,
     },
     {
-        "name": "Jaffna North",
-        "latitude": 9.6615,
-        "longitude": 80.0255,
-        "city": "Jaffna",
-        "address": "Jaffna North, Jaffna",
-        "operator": "ChargeSafe SL",
-        "connector_types": "CCS2",
-        "charging_power_kw": 75,
+        "name": "DEMO Matara Low Risk 02",
+        "latitude": 5.9485,
+        "longitude": 80.5353,
+        "city": "Matara",
+        "address": "Demo Address 6",
+        "operator": "ChargeSafe Demo",
+        "connector_types": "CCS2, Type 2",
+        "charging_power_kw": 60,
         "status": StationStatus.operational,
-        "safety_score": 78,
+        "safety_score": 15,
         "cyber_risk_level": CyberRiskLevel.low,
-        "firmware_version": "v1.8.0",
-        "firmware_age_days": 45,
-        "temperature_celsius": 30,
+        "firmware_version": "v2.4.1",
+        "firmware_age_days": 20,
+        "temperature_celsius": 28,
         "power_status": "Stable",
-        "fault_count": 1,
+        "fault_count": 0,
     },
 ]
 
 
 def seed_initial_data(db: Session) -> None:
-    if db.query(ChargingStation).first():
-        return
-
     now = datetime.utcnow()
+
+    stale_stations = db.query(ChargingStation).filter(ChargingStation.name.in_(REMOVED_STATION_NAMES)).all()
+    for stale_station in stale_stations:
+        db.delete(stale_station)
+    if stale_stations:
+        db.flush()
+
     def level_for_score(score: float) -> str:
         if score <= 30:
             return "LOW"
@@ -118,9 +153,28 @@ def seed_initial_data(db: Session) -> None:
         return "HIGH"
 
     for item in SEED_STATIONS:
-        station = ChargingStation(**item, last_scored_at=now)
-        db.add(station)
-        db.flush()
+        station = db.query(ChargingStation).filter(
+            ChargingStation.latitude == item["latitude"],
+            ChargingStation.longitude == item["longitude"],
+        ).first()
+
+        if station is None:
+            station = ChargingStation(**item, last_scored_at=now)
+            db.add(station)
+            db.flush()
+        else:
+            for field, value in item.items():
+                setattr(station, field, value)
+            station.last_scored_at = now
+            station.updated_at = now
+
+        has_score_history = db.query(ScoreHistory.id).filter(ScoreHistory.station_id == station.id).first()
+        has_temperature_history = db.query(TemperatureHistory.id).filter(
+            TemperatureHistory.station_id == station.id
+        ).first()
+
+        if has_score_history and has_temperature_history:
+            continue
 
         base_score = item["safety_score"] or 0
         for days_ago, score_offset, temp_offset in [
@@ -147,5 +201,28 @@ def seed_initial_data(db: Session) -> None:
                     recorded_at=recorded_at,
                 )
             )
+
+    admin_email = "admin@chargesafe.app"
+
+    # Create admin user if it doesn't exist
+    existing_admin = db.query(User).filter(User.username == "admin").first()
+    if not existing_admin:
+        admin_password = os.environ.get("ADMIN_PASSWORD", "")
+        if not admin_password:
+            raise RuntimeError(
+                "ADMIN_PASSWORD environment variable is not set. "
+                "Set it in your .env file before starting the server."
+            )
+        admin_user = User(
+            username="admin",
+            email=admin_email,
+            password_hash=hash_password(admin_password),
+            role=UserRole.admin,
+            is_active=True,
+            email_verified=True,
+        )
+        db.add(admin_user)
+    elif existing_admin.email == "admin@chargesafe.local":
+        existing_admin.email = admin_email
 
     db.commit()

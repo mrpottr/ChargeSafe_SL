@@ -47,6 +47,24 @@ SCHEMA_PATCHES = [
     END $$;
     """,
     """
+<<<<<<< HEAD
+=======
+    DO $$
+    BEGIN
+        IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'incidenttype') THEN
+            IF NOT EXISTS (
+                SELECT 1
+                FROM pg_enum
+                WHERE enumtypid = 'incidenttype'::regtype
+                  AND enumlabel = 'positive'
+            ) THEN
+                ALTER TYPE incidenttype ADD VALUE 'positive';
+            END IF;
+        END IF;
+    END $$;
+    """,
+    """
+>>>>>>> 53d3f3e (did some modifications and testings)
     ALTER TABLE charging_stations
         ADD COLUMN IF NOT EXISTS firmware_version VARCHAR(50),
         ADD COLUMN IF NOT EXISTS firmware_age_days INTEGER,
@@ -121,6 +139,190 @@ SCHEMA_PATCHES = [
         recorded_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
     );
     """,
+<<<<<<< HEAD
+=======
+    """
+    ALTER TABLE users
+        ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT TRUE,
+        ADD COLUMN IF NOT EXISTS mfa_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+        ADD COLUMN IF NOT EXISTS mfa_secret TEXT,
+        ADD COLUMN IF NOT EXISTS mfa_pending_secret TEXT;
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS user_sessions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        refresh_token_hash VARCHAR(64) NOT NULL UNIQUE,
+        expires_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+        last_seen_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
+        revoked_at TIMESTAMP WITHOUT TIME ZONE,
+        revoke_reason VARCHAR(100),
+        ip_address INET,
+        user_agent TEXT,
+        created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
+    );
+    """,
+    """CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON user_sessions(user_id);""",
+    """CREATE INDEX IF NOT EXISTS idx_user_sessions_expires_at ON user_sessions(expires_at);""",
+    """CREATE INDEX IF NOT EXISTS idx_user_sessions_last_seen_at ON user_sessions(last_seen_at);""",
+    """CREATE INDEX IF NOT EXISTS idx_user_sessions_revoked_at ON user_sessions(revoked_at);""",
+    """
+    CREATE TABLE IF NOT EXISTS audit_logs (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        action_type VARCHAR(100) NOT NULL,
+        user_id UUID NULL REFERENCES users(id) ON DELETE SET NULL,
+        ip_address INET,
+        user_agent TEXT,
+        result VARCHAR(20) NOT NULL,
+        details TEXT,
+        created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
+    );
+    """,
+    """
+    ALTER TABLE audit_logs
+        ADD COLUMN IF NOT EXISTS action_type VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS user_agent TEXT,
+        ADD COLUMN IF NOT EXISTS result VARCHAR(20),
+        ADD COLUMN IF NOT EXISTS details TEXT;
+    """,
+    """
+    ALTER TABLE audit_logs
+        ALTER COLUMN action_type SET DEFAULT 'unknown',
+        ALTER COLUMN result SET DEFAULT 'success';
+    """,
+    """
+    DO $$
+    DECLARE
+        has_action BOOLEAN;
+        has_metadata BOOLEAN;
+    BEGIN
+        SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_name = 'audit_logs'
+              AND column_name = 'action'
+        ) INTO has_action;
+
+        SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_name = 'audit_logs'
+              AND column_name = 'metadata'
+        ) INTO has_metadata;
+
+        IF has_action AND has_metadata THEN
+            EXECUTE $sql$
+                UPDATE audit_logs
+                SET action_type = COALESCE(action_type, action, 'unknown'),
+                    result = COALESCE(result, 'success'),
+                    details = COALESCE(details, CAST(metadata AS TEXT))
+                WHERE action_type IS NULL
+                   OR result IS NULL
+                   OR details IS NULL
+            $sql$;
+        ELSIF has_action THEN
+            EXECUTE $sql$
+                UPDATE audit_logs
+                SET action_type = COALESCE(action_type, action, 'unknown'),
+                    result = COALESCE(result, 'success')
+                WHERE action_type IS NULL
+                   OR result IS NULL
+            $sql$;
+        ELSIF has_metadata THEN
+            EXECUTE $sql$
+                UPDATE audit_logs
+                SET action_type = COALESCE(action_type, 'unknown'),
+                    result = COALESCE(result, 'success'),
+                    details = COALESCE(details, CAST(metadata AS TEXT))
+                WHERE action_type IS NULL
+                   OR result IS NULL
+                   OR details IS NULL
+            $sql$;
+        ELSE
+            UPDATE audit_logs
+            SET action_type = COALESCE(action_type, 'unknown'),
+                result = COALESCE(result, 'success')
+            WHERE action_type IS NULL
+               OR result IS NULL;
+        END IF;
+    END $$;
+    """,
+    """
+    ALTER TABLE audit_logs
+        ALTER COLUMN action_type SET NOT NULL,
+        ALTER COLUMN result SET NOT NULL;
+    """,
+    """
+    DO $$
+    BEGIN
+        IF EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_name = 'audit_logs'
+              AND column_name = 'ip_address'
+              AND data_type <> 'inet'
+        ) THEN
+            ALTER TABLE audit_logs
+                ALTER COLUMN ip_address TYPE INET
+                USING NULLIF(BTRIM(ip_address::text), '')::INET;
+        END IF;
+    END $$;
+    """,
+    """
+    DO $$
+    DECLARE
+        legacy_column RECORD;
+    BEGIN
+        IF EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_name = 'audit_logs'
+              AND column_name = 'action'
+        ) THEN
+            UPDATE audit_logs
+            SET action = COALESCE(action, action_type, 'unknown')
+            WHERE action IS NULL;
+        END IF;
+
+        IF EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_name = 'audit_logs'
+              AND column_name = 'status'
+        ) THEN
+            UPDATE audit_logs
+            SET status = COALESCE(status, result, 'success')
+            WHERE status IS NULL;
+        END IF;
+
+        IF EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_name = 'audit_logs'
+              AND column_name = 'metadata'
+        ) THEN
+            UPDATE audit_logs
+            SET metadata = COALESCE(metadata, to_jsonb(details::text))
+            WHERE metadata IS NULL
+              AND details IS NOT NULL;
+        END IF;
+
+        FOR legacy_column IN
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_name = 'audit_logs'
+              AND is_nullable = 'NO'
+              AND column_name NOT IN ('id', 'action_type', 'result', 'created_at')
+        LOOP
+            EXECUTE format(
+                'ALTER TABLE audit_logs ALTER COLUMN %I DROP NOT NULL',
+                legacy_column.column_name
+            );
+        END LOOP;
+    END $$;
+    """,
+>>>>>>> 53d3f3e (did some modifications and testings)
 ]
 
 

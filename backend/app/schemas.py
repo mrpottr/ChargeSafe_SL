@@ -1,3 +1,5 @@
+import re
+
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional
 from datetime import datetime
@@ -5,16 +7,56 @@ from uuid import UUID
 from app.models import UserRole, StationStatus, CyberRiskLevel, IncidentType, ReportStatus
 
 
+PASSWORD_POLICY_MESSAGE = (
+    "Password must be at least 8 characters long and include at least one lowercase letter, "
+    "one uppercase letter, and one number"
+)
+
+INCIDENT_TYPE_ALIASES = {
+    "overheating": IncidentType.overheating,
+    "billing error": IncidentType.billing_error,
+    "billing / payment error": IncidentType.billing_error,
+    "billing/payment error": IncidentType.billing_error,
+    "network outage": IncidentType.network_outage,
+    "connectivity / offline": IncidentType.network_outage,
+    "connectivity/offline": IncidentType.network_outage,
+    "connector damage": IncidentType.connector_damage,
+    "physical damage": IncidentType.connector_damage,
+    "charging cable issue": IncidentType.connector_damage,
+    "firmware issue": IncidentType.firmware_issue,
+    "power fluctuation": IncidentType.power_fluctuation,
+    "authentication failure": IncidentType.authentication_failure,
+    "positive": IncidentType.positive,
+    "other": IncidentType.other,
+}
+
+
+def validate_password_policy(password: str) -> str:
+    if len(password) < 8:
+        raise ValueError(PASSWORD_POLICY_MESSAGE)
+    if not re.search(r"[a-z]", password):
+        raise ValueError(PASSWORD_POLICY_MESSAGE)
+    if not re.search(r"[A-Z]", password):
+        raise ValueError(PASSWORD_POLICY_MESSAGE)
+    if not re.search(r"\d", password):
+        raise ValueError(PASSWORD_POLICY_MESSAGE)
+    return password
+
+
 # ============== User Schemas ==============
 class UserRegisterRequest(BaseModel):
     username: str = Field(..., min_length=3, max_length=100)
     email: EmailStr
-    password: str = Field(..., min_length=6)
+    password: str = Field(..., min_length=8)
 
     @field_validator('username')
     def username_alphanumeric(cls, v):
         assert v.isalnum() or '_' in v, 'Username must be alphanumeric or contain underscores'
         return v
+
+    @field_validator('password')
+    def password_policy(cls, v):
+        return validate_password_policy(v)
 
 
 class UserLoginRequest(BaseModel):
@@ -30,6 +72,8 @@ class UserResponse(BaseModel):
     is_active: bool
     created_at: datetime
     last_login: Optional[datetime]
+    email_verified: bool = True
+    mfa_enabled: bool = False
 
     class Config:
         from_attributes = True
@@ -42,11 +86,72 @@ class UserDetailResponse(UserResponse):
 
 class ChangePasswordRequest(BaseModel):
     current_password: str = Field(..., min_length=6)
-    new_password: str = Field(..., min_length=6)
+    new_password: str = Field(..., min_length=8)
+
+    @field_validator('new_password')
+    def password_policy(cls, v):
+        return validate_password_policy(v)
 
 
 class DeleteAccountRequest(BaseModel):
     current_password: str = Field(..., min_length=6)
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+    code: str = Field(..., pattern=r"^\d{6}$")
+
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+    token: str = Field(..., min_length=10)
+    new_password: str = Field(..., min_length=8)
+
+    @field_validator('new_password')
+    def password_policy(cls, v):
+        return validate_password_policy(v)
+
+
+class EmailVerificationRequest(BaseModel):
+    token: str = Field(..., min_length=10)
+
+
+class MfaSetupResponse(BaseModel):
+    secret: str
+    otp_auth_url: str
+    qr_code_data_url: str
+    message: str
+
+
+class MfaEnableRequest(BaseModel):
+    code: str = Field(..., pattern=r"^\d{6}$")
+
+
+class MfaLoginRequest(BaseModel):
+    mfa_token: str = Field(..., min_length=10)
+    code: str = Field(..., pattern=r"^\d{6}$")
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str = Field(..., min_length=10)
+
+
+class RegistrationMfaSetupRequest(BaseModel):
+    setup_token: str = Field(..., min_length=10)
+
+
+class RegistrationMfaSetupResponse(BaseModel):
+    email: EmailStr
+    setup_token: str
+    secret: str
+    otp_auth_url: str
+    qr_code_data_url: str
+    message: str
+
+
+class RegistrationMfaCompleteRequest(BaseModel):
+    setup_token: str = Field(..., min_length=10)
+    code: str = Field(..., pattern=r"^\d{6}$")
 
 # ============== Charging Station Schemas ==============
 class StationScoreHistoryItem(BaseModel):
@@ -96,6 +201,8 @@ class ChargingStationCreateUpdate(BaseModel):
     city: Optional[str] = None
     address: Optional[str] = None
     operator: Optional[str] = None
+    connector_types: Optional[str] = None
+    charging_power_kw: Optional[float] = None
     status: Optional[StationStatus] = StationStatus.unknown
     risk_score: Optional[float] = Field(None, ge=0, le=100)
     cyber_risk_level: Optional[CyberRiskLevel] = None
@@ -105,16 +212,63 @@ class ChargingStationCreateUpdate(BaseModel):
     fault_count: int = 0
 
 
+class CyberScoreBreakdownItem(BaseModel):
+    criterion_id: UUID
+    criterion_name: str
+    description: Optional[str]
+    iec_reference: Optional[str]
+    weight: float
+    score_value: int
+    risk_rating: Optional[CyberRiskLevel]
+    evaluated_at: datetime
+    notes: Optional[str]
+
+    class Config:
+        from_attributes = True
+
+
+class StationCyberScoreResponse(BaseModel):
+    station_id: UUID
+    station_name: str
+    overall_score: float
+    overall_risk_level: str
+    criteria_count: int
+    breakdown: list[CyberScoreBreakdownItem]
+
+
 # ============== Report Schemas ==============
 class ReportCreate(BaseModel):
     station_id: UUID
     report_type: IncidentType
-    severity: int = Field(..., ge=1, le=5)
+    severity: Optional[int] = Field(None, ge=1, le=5)
     description: str = Field(..., min_length=10)
+
+    @field_validator("report_type", mode="before")
+    def normalize_report_type(cls, value):
+        if isinstance(value, IncidentType):
+            return value
+        normalized = str(value or "").strip().lower()
+        if normalized in INCIDENT_TYPE_ALIASES:
+            return INCIDENT_TYPE_ALIASES[normalized]
+        return value
+
+    @field_validator("severity")
+    def require_severity_for_non_positive(cls, value, info):
+        report_type = info.data.get("report_type")
+        if report_type == IncidentType.positive:
+            return None
+        if value is None:
+            raise ValueError("Severity is required unless the feedback category is Positive.")
+        return value
 
 
 class ReportUpdate(BaseModel):
     status: ReportStatus
+
+
+class InternalFeedbackProcessRequest(BaseModel):
+    report_id: UUID
+    station_id: UUID
 
 
 class ReportResponse(BaseModel):
@@ -122,7 +276,7 @@ class ReportResponse(BaseModel):
     user_id: UUID
     station_id: UUID
     report_type: IncidentType
-    severity: int
+    severity: Optional[int]
     description: str
     status: ReportStatus
     created_at: datetime
@@ -198,13 +352,26 @@ class UserSettingsUpdate(BaseModel):
 
 # ============== Auth Token Schemas ==============
 class TokenResponse(BaseModel):
-    access_token: str
-    token_type: str
-    user: UserResponse
+    access_token: Optional[str] = None
+    refresh_token: Optional[str] = None
+    token_type: str = "bearer"
+    user: Optional[UserResponse] = None
+    mfa_required: bool = False
+    mfa_token: Optional[str] = None
+    mfa_setup_required: bool = False
+    mfa_setup_token: Optional[str] = None
 
 
 class MessageOnlyResponse(BaseModel):
     message: str
+    next_step: Optional[str] = None
+    setup_token: Optional[str] = None
+
+
+class ForgotPasswordChallengeResponse(BaseModel):
+    message: str
+    email: EmailStr
+    reset_token: str
 
 
 class ChatRequest(BaseModel):

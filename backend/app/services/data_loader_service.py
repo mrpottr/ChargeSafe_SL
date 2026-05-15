@@ -6,7 +6,11 @@ from typing import Any, Dict, List, Optional
 import requests
 from sqlalchemy.orm import Session
 
+<<<<<<< HEAD
 from app.models import ChargingStation, Report
+=======
+from app.models import ChargingStation, IncidentType, Report
+>>>>>>> 53d3f3e (did some modifications and testings)
 from app.services.risk_score_ml_service import risk_scorer
 
 logger = logging.getLogger(__name__)
@@ -56,14 +60,31 @@ class DataLoaderService:
     )
 
     @staticmethod
+<<<<<<< HEAD
     def analyze_feedback_signal(description: str, severity: Optional[int] = None) -> Dict[str, Any]:
         text = (description or "").strip().lower()
         if not text:
+=======
+    def analyze_feedback_signal(
+        description: str,
+        severity: Optional[int] = None,
+        report_type: Optional[IncidentType] = None,
+    ) -> Dict[str, Any]:
+        text = (description or "").strip().lower()
+        if not text and report_type != IncidentType.positive:
+>>>>>>> 53d3f3e (did some modifications and testings)
             return {"score": 0.0, "label": "neutral"}
 
         signal = 0.0
         sanitized_text = text
 
+<<<<<<< HEAD
+=======
+        if report_type == IncidentType.positive:
+            # Explicit positive station feedback should always nudge the score downward.
+            signal -= 0.45
+
+>>>>>>> 53d3f3e (did some modifications and testings)
         for phrase in DataLoaderService.POSITIVE_FEEDBACK_PHRASES:
             if phrase in sanitized_text:
                 signal -= 0.35
@@ -158,6 +179,10 @@ class DataLoaderService:
         feedback_signal = DataLoaderService.analyze_feedback_signal(
             description,
             severity=(report.severity if report else None),
+<<<<<<< HEAD
+=======
+            report_type=(report.report_type if report else None),
+>>>>>>> 53d3f3e (did some modifications and testings)
         )
 
         return {

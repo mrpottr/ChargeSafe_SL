@@ -79,6 +79,7 @@ docker compose --env-file .env.docker up --build
 - Frontend: `http://localhost:5173`
 - Backend API docs: `http://localhost:8000/docs`
 - Backend health: `http://localhost:8000/api/health`
+- Mail inbox for verification/reset emails: `http://localhost:8025`
 
 ## Local Development (Without Docker)
 
@@ -138,3 +139,33 @@ New contributors should follow the full step-by-step onboarding document:
 - Do not store real secrets in tracked files.
 - Keep local ports configurable to avoid conflicts with other running projects.
 - Use container health checks (`db`) as startup dependency gating for backend readiness.
+
+## Applied Security Measures
+
+- JWT authentication is enforced on protected routes, with role-based admin checks where required.
+- Request bodies are validated with Pydantic models before route logic runs.
+- Database access uses SQLAlchemy ORM filters and parameterized statements rather than string-built SQL for application queries.
+- Login and chat endpoints are rate-limited to reduce brute-force and abuse risk.
+- CORS is restricted to configured frontend origins, methods, and headers.
+- Password reset tokens and MFA login tokens are signed server-side.
+- Microsoft Authenticator TOTP-based MFA is supported for interactive logins.
+
+Recommended verification for SQL injection and input validation:
+
+1. In Postman, send a login request with an invalid SQL-style email such as `' OR 1=1 --`.
+2. Confirm the API returns `422` validation failure instead of `200` or `500`.
+3. For protected admin routes, confirm unauthenticated requests return `401`.
+4. For UUID-based request bodies, send malformed values and confirm validation fails before business logic runs.
+
+## HTTPS Deployment Plan
+
+For production deployment, keep TLS termination at the reverse proxy or load balancer level rather than inside the FastAPI app container.
+
+Recommended plan:
+
+- Terminate HTTPS with Nginx, Traefik, Caddy, or a cloud load balancer.
+- Use a trusted certificate source such as Let's Encrypt or your cloud certificate manager.
+- Forward requests to the backend over a private network and preserve `X-Forwarded-Proto` / `X-Forwarded-For` headers.
+- Keep `BACKEND_CORS_ORIGINS` limited to the real frontend HTTPS origin, for example `https://app.example.com`.
+- Redirect all plain HTTP traffic to HTTPS at the proxy layer.
+- Mark secure cookies and secrets for production-only values before going live.

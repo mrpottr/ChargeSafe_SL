@@ -8,3 +8,6 @@ dist/
 build/
 .DS_Store
 postgres_data/
+
+# SSL Certificates (auto-generated, never commit)
+nginx/certs/
