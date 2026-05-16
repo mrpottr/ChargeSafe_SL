@@ -1,3 +1,5 @@
+/* This stylesheet supports the lighter marketing-style shell and keeps its
+   spacing, glass panels, and typography separate from the main dashboard UI. */
 :root {
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   color: #112031;

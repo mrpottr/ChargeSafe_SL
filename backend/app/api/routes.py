@@ -56,6 +56,8 @@ from app.services.session_service import SessionService
 router = APIRouter()
 
 
+# These helpers keep repeated session and audit wiring out of the individual
+# endpoints so the route bodies stay focused on their main business action.
 def write_audit_log(
     db: Session,
     http_request: Request,
@@ -98,7 +100,8 @@ def get_overall_cyber_risk_level(score: float) -> str:
 
 
 
-# ============== Health Checks ==============
+# The opening routes are operational checks and admin sync actions that help
+# deployments confirm the API is healthy before user traffic is sent in.
 @router.get("/health")
 def health_check(db: Session = Depends(get_db)):
     """Health check endpoint."""
@@ -164,7 +167,8 @@ def chat_with_ai(
     return {"reply": reply}
 
 
-# ============== Authentication ==============
+# Authentication routes cover the full account lifecycle, from registration and
+# MFA onboarding through refresh, logout, and account recovery.
 @router.post("/auth/register", response_model=MessageOnlyResponse)
 def register(request: UserRegisterRequest, db: Session = Depends(get_db)):
     """Register a new user."""
@@ -815,7 +819,8 @@ def disable_mfa(
     return {"message": "Multi-factor authentication disabled"}
 
 
-# ============== Stations ==============
+# Station routes are the main data surface for the dashboard, map, and station
+# detail views, so they bundle live telemetry, cyber scores, and history access.
 @router.get("/stations", response_model=List[ChargingStationResponse])
 def list_stations(
     db: Session = Depends(get_db),
@@ -1071,7 +1076,8 @@ def update_station(
     return station
 
 
-# ============== Incidents ==============
+# Incident and feedback routes let users report problems while the backend turns
+# those submissions into immediate risk updates and admin workflows.
 @router.post("/reports", response_model=ReportResponse, status_code=201)
 @router.post("/incidents", response_model=ReportResponse, status_code=201)
 def create_report(
@@ -1213,7 +1219,8 @@ def update_report(
     return report
 
 
-# ============== Notifications ==============
+# Notification routes support the user inbox by listing alerts, marking them
+# read, and clearing the unread backlog after follow-up actions happen.
 @router.get("/notifications", response_model=List[NotificationResponse])
 def list_notifications(
     current_user: User = Depends(get_current_user),
@@ -1272,7 +1279,8 @@ def mark_all_notifications_read(
     return {"message": "All notifications marked as read"}
 
 
-# ============== Messages (Chat History) ==============
+# Chat history routes keep assistant conversations persistent so the frontend can
+# restore context between sessions without storing it only in memory.
 @router.post("/messages", response_model=MessageResponse)
 def create_message(
     request: MessageCreate,
@@ -1315,7 +1323,8 @@ def clear_messages(
     return {"message": "Message history cleared"}
 
 
-# ============== User Settings ==============
+# Settings routes expose each user's dashboard preferences and alert thresholds
+# as a dedicated surface instead of overloading the profile endpoints.
 @router.get("/settings", response_model=UserSettingsResponse)
 def get_settings(
     current_user: User = Depends(get_current_user),
@@ -1354,7 +1363,8 @@ def update_settings(
     return settings
 
 
-# ============== User Profile ==============
+# Profile routes manage the authenticated user's own identity data, password,
+# and account lifecycle without mixing those concerns into admin endpoints.
 @router.get("/me", response_model=UserResponse)
 def get_current_user_profile(current_user: User = Depends(get_current_user)):
     """Get current user profile."""
@@ -1466,7 +1476,8 @@ def delete_account(
     return {"message": "Account deleted successfully"}
 
 
-# ============== Admin - Station Management ==============
+# The admin routes below expose read and moderation views that are intentionally
+# separate from the self-service user endpoints above.
 @router.get("/admin/stations", response_model=List[ChargingStationDetailResponse])
 def admin_list_stations(
     current_user: User = Depends(get_current_admin),
@@ -1478,7 +1489,8 @@ def admin_list_stations(
     return stations
 
 
-# ============== Admin - Reports Management ==============
+# Report administration keeps moderation workflows centralized so support teams
+# can review all submitted feedback from a single protected surface.
 @router.get("/admin/reports", response_model=List[ReportDetailResponse])
 def admin_list_reports(
     current_user: User = Depends(get_current_admin),
@@ -1496,7 +1508,8 @@ def admin_list_reports(
     return reports
 
 
-# ============== Admin - Users Management ==============
+# User administration focuses on visibility and deactivation controls rather
+# than duplicating the broader authentication logic already defined above.
 @router.get("/admin/users", response_model=List[UserResponse])
 def admin_list_users(
     current_user: User = Depends(get_current_admin),
@@ -1542,7 +1555,8 @@ def admin_deactivate_user(
     return {"message": "User deactivated"}
 
 
-# ============== Station Score History ==============
+# Historical station routes feed the charts and trend views that explain how
+# scoring and temperature readings have moved over recent days.
 @router.get("/stations/{station_id}/score-history")
 def get_station_score_history(
     station_id: UUID,

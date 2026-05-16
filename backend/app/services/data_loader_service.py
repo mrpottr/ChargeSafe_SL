@@ -6,25 +6,21 @@ from typing import Any, Dict, List, Optional
 import requests
 from sqlalchemy.orm import Session
 
-<<<<<<< HEAD
-from app.models import ChargingStation, Report
-=======
 from app.models import ChargingStation, IncidentType, Report
->>>>>>> 53d3f3e (did some modifications and testings)
 from app.services.risk_score_ml_service import risk_scorer
 
 logger = logging.getLogger(__name__)
 
-# ==================== CRITICAL: API KEY PLACEHOLDER ====================
-# USER ACTION REQUIRED
-# Paste your real OpenChargeMap API key into OPENCHARGEMAP_API_KEY below.
-# ======================================================================
+# This API key constant is the only place where the OpenChargeMap credential is
+# read for sync jobs, so local setup changes can stay isolated to this module.
 OPENCHARGEMAP_API_KEY = "2ae83698-9e83-4234-b647-105f0fe0e089"
 OPENCHARGEMAP_BASE_URL = "https://api.openchargemap.io/v3/poi"
 OPENCHARGEMAP_COUNTRY_CODE = "LK"
 
 
 class DataLoaderService:
+    # This service is the bridge between the external station feed, internal
+    # review data, and the ML scorer that turns both into station risk updates.
     POSITIVE_FEEDBACK_PHRASES = (
         "working fine",
         "works fine",
@@ -60,31 +56,24 @@ class DataLoaderService:
     )
 
     @staticmethod
-<<<<<<< HEAD
-    def analyze_feedback_signal(description: str, severity: Optional[int] = None) -> Dict[str, Any]:
-        text = (description or "").strip().lower()
-        if not text:
-=======
     def analyze_feedback_signal(
         description: str,
         severity: Optional[int] = None,
         report_type: Optional[IncidentType] = None,
     ) -> Dict[str, Any]:
+        # Feedback text is reduced to a small sentiment-style signal so recent
+        # reports can influence scoring without overpowering telemetry inputs.
         text = (description or "").strip().lower()
         if not text and report_type != IncidentType.positive:
->>>>>>> 53d3f3e (did some modifications and testings)
             return {"score": 0.0, "label": "neutral"}
 
         signal = 0.0
         sanitized_text = text
 
-<<<<<<< HEAD
-=======
         if report_type == IncidentType.positive:
             # Explicit positive station feedback should always nudge the score downward.
             signal -= 0.45
 
->>>>>>> 53d3f3e (did some modifications and testings)
         for phrase in DataLoaderService.POSITIVE_FEEDBACK_PHRASES:
             if phrase in sanitized_text:
                 signal -= 0.35
@@ -140,6 +129,8 @@ class DataLoaderService:
 
     @staticmethod
     def get_station_summary(db: Session, station_id: Any) -> Dict[str, Any]:
+        # The summary aggregates recent reports into stable numeric features that
+        # the ML pipeline can consume without parsing raw report rows every time.
         reports = db.query(Report).filter(Report.station_id == station_id).all()
         review_count = len(reports)
         if review_count == 0:
@@ -167,6 +158,8 @@ class DataLoaderService:
         station: ChargingStation,
         report: Optional[Report] = None,
     ) -> Dict[str, Any]:
+        # Feature mapping translates ORM objects into the exact mixed telemetry
+        # and review payload shape expected by the trained risk model.
         summary = DataLoaderService.get_station_summary(db, station.id)
         bad_ratio = summary["bad_review_ratio"]
 
@@ -179,10 +172,7 @@ class DataLoaderService:
         feedback_signal = DataLoaderService.analyze_feedback_signal(
             description,
             severity=(report.severity if report else None),
-<<<<<<< HEAD
-=======
             report_type=(report.report_type if report else None),
->>>>>>> 53d3f3e (did some modifications and testings)
         )
 
         return {
@@ -208,6 +198,8 @@ class DataLoaderService:
 
     @staticmethod
     def fetch_openchargemap_for_sri_lanka() -> List[Dict[str, Any]]:
+        # External station data is normalized here so the rest of the backend can
+        # work with one consistent schema no matter how the upstream feed looks.
         if OPENCHARGEMAP_API_KEY == "PASTE_YOUR_API_KEY_HERE":
             raise RuntimeError(
                 "OpenChargeMap API key is missing. Update OPENCHARGEMAP_API_KEY in backend/app/services/data_loader_service.py."
@@ -265,6 +257,8 @@ class DataLoaderService:
 
     @staticmethod
     def _upsert_station(db: Session, station_data: Dict[str, Any], force_update: bool) -> tuple[ChargingStation, bool, bool]:
+        # Upserting by coordinates lets the sync refresh known stations in place
+        # while still creating first-time rows for newly discovered locations.
         existing_station = db.query(ChargingStation).filter(
             ChargingStation.latitude == station_data["latitude"],
             ChargingStation.longitude == station_data["longitude"],
@@ -351,6 +345,8 @@ class DataLoaderService:
 
     @staticmethod
     def sync_openchargemap_to_database(db: Session, force_update: bool = False) -> Dict[str, Any]:
+        # The full sync pipeline fetches, normalizes, upserts, rescales risk, and
+        # returns a compact stats object for logs, audits, and admin feedback.
         stats = {
             "fetched": 0,
             "created": 0,

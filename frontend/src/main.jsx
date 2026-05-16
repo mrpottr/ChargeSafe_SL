@@ -2,6 +2,8 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 
+// The root error boundary keeps a rendering crash visible during development
+// instead of leaving the screen blank with no clue about what failed.
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -30,6 +32,8 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+// The app is mounted once here so the shared boundary wraps every screen and
+// React strict mode can surface unsafe patterns during development.
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <ErrorBoundary>

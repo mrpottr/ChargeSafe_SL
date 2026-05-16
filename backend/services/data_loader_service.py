@@ -12,10 +12,8 @@ from backend.services.risk_score_ml_service import risk_score_ml_service
 
 logger = logging.getLogger(__name__)
 
-# ==================== CRITICAL: API KEY PLACEHOLDER ====================
-# USER ACTION REQUIRED
-# Paste your real OpenChargeMap API key into OPENCHARGEMAP_API_KEY below.
-# ======================================================================
+# This legacy loader keeps its OpenChargeMap credential in one obvious place so
+# local environment setup can be updated without hunting through the file.
 OPENCHARGEMAP_API_KEY = "PASTE_YOUR_API_KEY_HERE"
 OPENCHARGEMAP_BASE_URL = "https://api.openchargemap.io/v3/poi"
 OPENCHARGEMAP_COUNTRY_CODE = "LK"

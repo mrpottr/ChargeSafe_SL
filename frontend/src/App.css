@@ -1,4 +1,5 @@
-/* SPLASH SCREEN */
+/* These opening rules stage the splash screen with drifting grid lines and soft
+   glows so the dashboard has a distinct branded startup moment. */
 #splash-screen{
   position:fixed;inset:0;z-index:5000;
   background:var(--bg0);
@@ -90,7 +91,8 @@ body{font-family:'Barlow',sans-serif;background:var(--bg0);color:var(--txt);disp
 .mono{font-family:'Fira Code',monospace}
 .orb{font-family:'Orbitron',sans-serif}
 
-/* ─── AUTH WRAPPER ─── */
+/* This block styles the full-screen authentication shell and its subtle ambient
+   lighting so login and onboarding feel visually tied to the main app. */
 #auth-wrapper{
   position:fixed;inset:0;z-index:4000;
   background:var(--bg0);
@@ -158,10 +160,12 @@ body{font-family:'Barlow',sans-serif;background:var(--bg0);color:var(--txt);disp
 .auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--border)}
 .auth-divider span{font-family:'Fira Code',monospace;font-size:10px;color:var(--txt3)}
 
-/* ─── APP SHELL ─── */
+/* The app shell establishes the fixed two-pane layout that keeps navigation and
+   live operational data visible without page-level scrolling. */
 #app{display:flex;height:100vh;overflow:hidden;zoom:1.15}
 
-/* ─── SIDEBAR ─── */
+/* Sidebar styles focus on dense navigation, role context, and quick status
+   cues so users can move through the monitoring workflow quickly. */
 #sidebar{
   width:var(--sidebar);flex-shrink:0;
   background:var(--bg1);border-right:1px solid var(--border);
@@ -234,7 +238,8 @@ body{font-family:'Barlow',sans-serif;background:var(--bg0);color:var(--txt);disp
 }
 .btn-logout:hover{border-color:var(--red);color:var(--red)}
 
-/* ─── MAIN CONTENT ─── */
+/* Main content rules define the shared chrome for the top bar and content area
+   where each dashboard view is swapped in. */
 #main{flex:1;overflow:hidden;display:flex;flex-direction:column}
 #topbar{
   height:52px;flex-shrink:0;
@@ -262,13 +267,15 @@ body{font-family:'Barlow',sans-serif;background:var(--bg0);color:var(--txt);disp
 
 #content{flex:1;overflow-y:auto;background:var(--bg0)}
 
-/* ─── VIEW BASE ─── */
+/* These base view rules give each screen a common container behavior before the
+   more specific widgets add their own layout. */
 .view{display:none;padding:24px;animation:fadeIn .25s ease}
 .view.active{display:block}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 @keyframes slideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
 
-/* ─── SHARED COMPONENTS ─── */
+/* Shared component styles keep buttons, cards, badges, and form controls
+   visually consistent across the large single-page interface. */
 .page-header{margin-bottom:24px}
 .page-label{font-family:'Fira Code',monospace;font-size:10px;letter-spacing:.14em;color:var(--cyan);text-transform:uppercase;margin-bottom:6px}
 .page-label::before{content:'// '}
@@ -367,7 +374,8 @@ body{font-family:'Barlow',sans-serif;background:var(--bg0);color:var(--txt);disp
 .form-row{display:flex;gap:12px}
 .form-row .form-group{flex:1}
 
-/* ─── TABLE ─── */
+/* Table styling keeps dense operational data readable without breaking the
+   dashboard's compact monitoring layout. */
 .data-table{width:100%;border-collapse:collapse;font-size:12px}
 .data-table th{
   font-family:'Fira Code',monospace;font-size:9px;letter-spacing:.1em;
@@ -379,7 +387,8 @@ body{font-family:'Barlow',sans-serif;background:var(--bg0);color:var(--txt);disp
 .data-table tr:hover td{background:rgba(255,255,255,.02)}
 .data-table td .mono{font-size:11px;color:var(--txt3)}
 
-/* ─── RISK BAR ─── */
+/* The risk bar and adjacent metrics make score changes easy to scan at a
+   glance when a station is opened. */
 .risk-bar-wrap{background:var(--bg2);border-radius:3px;height:6px;overflow:hidden;margin-top:4px}
 .risk-bar-fill{height:100%;border-radius:3px;transition:width 1s ease}
 .risk-bar-fill.green{background:var(--green)}
@@ -405,7 +414,8 @@ body{font-family:'Barlow',sans-serif;background:var(--bg0);color:var(--txt);disp
   50%{box-shadow:0 0 20px rgba(0,212,255,.18)}
 }
 
-/* ─── FACTOR ROW ─── */
+/* Factor rows organize contributing signals into short stacked summaries that
+   read cleanly even inside narrow cards. */
 .factor-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
 .factor-label{font-family:'Fira Code',monospace;font-size:10px;color:var(--txt3);width:130px;flex-shrink:0}
 .factor-bar-wrap{flex:1;background:var(--bg2);border-radius:3px;height:7px;overflow:hidden}
@@ -418,7 +428,8 @@ body{font-family:'Barlow',sans-serif;background:var(--bg0);color:var(--txt);disp
 .factor-status.warn{color:var(--amber)}
 .factor-status.fail{color:var(--red)}
 
-/* ─── STATION CARD LIST ─── */
+/* Station card list styles support compact browse views when multiple stations
+   need to be compared outside the map. */
 .station-list-card{
   background:var(--bg1);border:1px solid var(--border);border-radius:4px;
   padding:14px 16px;margin-bottom:8px;cursor:pointer;
@@ -438,7 +449,8 @@ body{font-family:'Barlow',sans-serif;background:var(--bg0);color:var(--txt);disp
 .slc-score.warn{color:var(--amber)}
 .slc-score.danger{color:var(--red)}
 
-/* ─── MAP ─── */
+/* Map styling keeps Leaflet aligned with the dashboard theme while preserving
+   enough contrast for markers and overlays to stay readable. */
 #map-canvas{
   background:var(--bg1);border:1px solid var(--border);border-radius:6px;
   position:relative;overflow:hidden;height:460px;
@@ -455,7 +467,8 @@ body{font-family:'Barlow',sans-serif;background:var(--bg0);color:var(--txt);disp
 }
 .map-tooltip.show{display:block}
 
-/* ─── CHATBOT ─── */
+/* Chatbot styles preserve the terminal-like tone of the assistant while still
+   fitting into the surrounding dashboard cards. */
 .chat-messages{
   height:360px;overflow-y:auto;padding:16px;
   display:flex;flex-direction:column;gap:12px;
@@ -497,7 +510,8 @@ body{font-family:'Barlow',sans-serif;background:var(--bg0);color:var(--txt);disp
 .typing-dot:nth-child(3){animation-delay:.4s}
 @keyframes typingBounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
 
-/* ─── NOTIF ITEM ─── */
+/* Notification items are tuned for quick scanning so severity, time, and
+   message content stay legible in a busy inbox. */
 .notif-item{
   background:var(--bg1);border:1px solid var(--border);border-radius:4px;
   padding:14px 16px;margin-bottom:8px;
@@ -513,7 +527,8 @@ body{font-family:'Barlow',sans-serif;background:var(--bg0);color:var(--txt);disp
 .notif-time{font-family:'Fira Code',monospace;font-size:10px;color:var(--txt3);margin-top:4px}
 .notif-actions{display:flex;gap:6px;margin-top:8px}
 
-/* ─── REPORT ITEM ─── */
+/* Report item rules give submitted feedback a structured timeline feel without
+   introducing a separate page layout system. */
 .report-item{
   background:var(--bg1);border:1px solid var(--border);border-radius:4px;
   padding:14px 16px;margin-bottom:8px;
@@ -524,7 +539,8 @@ body{font-family:'Barlow',sans-serif;background:var(--bg0);color:var(--txt);disp
 .report-meta{font-size:12px;color:var(--txt2);margin-bottom:8px}
 .report-desc{font-size:12px;color:var(--txt3);margin-bottom:8px;font-style:italic}
 
-/* ─── CYBER CHECKS ─── */
+/* Cyber check styles support the criterion breakdown and highlight areas where
+   the station posture needs attention. */
 .cyber-check{
   display:flex;align-items:center;justify-content:space-between;
   padding:10px 0;border-bottom:1px solid var(--border);
@@ -537,7 +553,8 @@ body{font-family:'Barlow',sans-serif;background:var(--bg0);color:var(--txt);disp
 .cc-status.fail{background:var(--red-g);color:var(--red);border:1px solid rgba(255,68,68,.3)}
 .cc-status.partial{background:var(--amber-g);color:var(--amber);border:1px solid rgba(255,179,0,.3)}
 
-/* ─── SCORE GAUGE ─── */
+/* The score gauge visuals make the current station posture feel prominent while
+   staying consistent with the app's neon palette. */
 .gauge-wrap{text-align:center;padding:16px 0}
 .gauge-svg{width:180px;height:110px}
 .gauge-score{font-family:'Orbitron',sans-serif;font-size:44px;font-weight:900;line-height:1}
@@ -546,13 +563,16 @@ body{font-family:'Barlow',sans-serif;background:var(--bg0);color:var(--txt);disp
 .gauge-score.red{color:var(--red)}
 .gauge-sub{font-family:'Fira Code',monospace;font-size:10px;color:var(--txt3);letter-spacing:.08em;margin-top:4px}
 
-/* ─── ADMIN TABLE ─── */
+/* Admin table adjustments keep moderation screens dense enough for review work
+   while still matching the shared table language. */
 .admin-actions{display:flex;gap:6px}
 
-/* ─── SCROLLABLE SECTION ─── */
+/* Scrollable sections are used sparingly to keep long lists contained inside
+   cards without breaking the fixed dashboard frame. */
 .scrollable{max-height:340px;overflow-y:auto}
 
-/* ─── TOAST ─── */
+/* Toasts surface short-lived feedback near the edge of the screen so actions
+   feel acknowledged without interrupting the workflow. */
 #toast-container{position:fixed;bottom:24px;right:24px;z-index:500;display:flex;flex-direction:column;gap:8px}
 .toast{
   padding:12px 18px;border-radius:4px;
@@ -567,7 +587,8 @@ body{font-family:'Barlow',sans-serif;background:var(--bg0);color:var(--txt);disp
 .toast.info{background:var(--card);border-left:3px solid var(--cyan);color:var(--cyan)}
 @keyframes slideLeft{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
 
-/* ─── TICKER ─── */
+/* The live ticker adds motion to the dashboard overview and helps recent
+   network activity stay visible at a glance. */
 .live-ticker{
   background:var(--bg2);border:1px solid var(--border);border-radius:4px;
   padding:8px 12px;overflow:hidden;margin-bottom:16px;
@@ -579,7 +600,8 @@ body{font-family:'Barlow',sans-serif;background:var(--bg0);color:var(--txt);disp
 .ticker-chip .amber{color:var(--amber)}
 .ticker-chip .red{color:var(--red)}
 
-/* ─── MISC ─── */
+/* These smaller utility rules catch the remaining layout details that are
+   shared across several views but do not justify their own section. */
 .divider{height:1px;background:var(--border);margin:16px 0}
 .text-green{color:var(--green)} .text-amber{color:var(--amber)} .text-red{color:var(--red)} .text-cyan{color:var(--cyan)}
 .mb8{margin-bottom:8px} .mb16{margin-bottom:16px} .mb24{margin-bottom:24px}
@@ -596,14 +618,16 @@ body{font-family:'Barlow',sans-serif;background:var(--bg0);color:var(--txt);disp
 .tab-btn:hover{color:var(--txt2);background:rgba(255,255,255,.02)}
 .tab-btn.active{background:var(--cyan-g);color:var(--cyan)}
 
-/* ─── SETTINGS COMPONENTS ─── */
+/* Settings controls need slightly more bespoke spacing and affordances because
+   they mix toggles, sliders, and explanatory text in the same panel. */
 .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
 .setting-item { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
 .setting-info { flex: 1; }
 .setting-label { font-size: 13px; font-weight: 600; color: var(--txt); }
 .setting-desc { font-size: 11px; color: var(--txt3); margin-top: 2px; }
 
-/* Switch Toggle */
+/* Toggle styles keep binary preferences tactile and readable inside the
+   settings view without relying on browser defaults. */
 .switch { position: relative; display: inline-block; width: 44px; height: 22px; }
 .switch input { opacity: 0; width: 0; height: 0; }
 .slider-toggle {
@@ -617,7 +641,8 @@ body{font-family:'Barlow',sans-serif;background:var(--bg0);color:var(--txt);disp
 input:checked + .slider-toggle { background-color: var(--green); border-color: var(--green); }
 input:checked + .slider-toggle:before { transform: translateX(22px); background-color: #060c1a; }
 
-/* Range Slider */
+/* Slider rules make threshold inputs feel native to the design while still
+   giving users clear feedback about the active range. */
 .range-slider {
   width: 100%; height: 4px; background: var(--bg2); border-radius: 2px;
   outline: none; -webkit-appearance: none; appearance: none; margin: 12px 0;
@@ -630,7 +655,8 @@ input:checked + .slider-toggle:before { transform: translateX(22px); background-
 
 .threshold-val { font-family: 'Orbitron', sans-serif; font-size: 18px; font-weight: 700; color: var(--amber); min-width: 30px; text-align: right; }
 
-/* ─── INTERACTIVE MAP FIXES ─── */
+/* These final map fixes correct pointer and stacking behavior so interactive
+   Leaflet layers still behave inside the dashboard shell. */
 .leaflet-container { background: var(--bg0) !important; font-family: 'Barlow', sans-serif !important; }
 .map-overlay-controls {
   position: absolute; top: 20px; left: 20px; z-index: 1000;

@@ -12,6 +12,8 @@ LOW_RISK_MAX = 30.0
 MEDIUM_RISK_MAX = 70.0
 
 
+# These formatting helpers keep risk-change messaging consistent everywhere the
+# backend needs to notify users about rescoring events.
 def map_risk_category(score: Optional[float]) -> Optional[str]:
     """Map a numeric score into the app's existing LOW / MEDIUM / HIGH bands."""
     if score is None:
@@ -50,6 +52,8 @@ def notify_on_risk_state_change(
     new_score: Optional[float],
     timestamp: datetime,
 ) -> int:
+    # Notification fan-out happens only after the score meaningfully changes, so
+    # users see state transitions and repeated rescoring without duplicate noise.
     """
     Insert user notifications when a station's ML score changes after the first score.
 

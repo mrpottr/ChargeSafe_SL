@@ -10,7 +10,8 @@ const REGISTER_MFA_SETUP_KEY = "chargesafe_register_mfa_setup";
 const LOW_RISK_MAX = 30;
 const MEDIUM_RISK_MAX = 70;
 
-// Fix Leaflet marker icon issues in React
+// Leaflet's default asset lookup does not play nicely with this React setup, so
+// the icon paths are wired manually once at module load time.
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
@@ -32,7 +33,8 @@ const MapResizer = () => {
 const seedStations = [];
 
 const createPinIcon = (color) => {
-  // SVG pin icon matching the design
+  // The marker is rendered from inline SVG so every risk color can reuse the
+  // same shape without depending on a separate generated asset file.
   const svgString = `
     <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="32" height="40">
       <defs>
@@ -314,7 +316,9 @@ function App() {
   const [feedbackBusy, setFeedbackBusy] = useState(false);
   const [stationCyberScore, setStationCyberScore] = useState(null);
   const [showSplash, setShowSplash] = useState(true);
-  const [currentView, setCurrentView] = useState("dashboard"); // default when logged in
+  // Dashboard is the default authenticated landing view because it gives the
+  // quickest snapshot of risk, alerts, and station status in one place.
+  const [currentView, setCurrentView] = useState("dashboard");
   const [authView, setAuthView] = useState("login");
   const [pendingAdminLogin, setPendingAdminLogin] = useState(false);
   const [pendingMfaToken, setPendingMfaToken] = useState("");
@@ -347,7 +351,8 @@ function App() {
   const [mlScore, setMlScore] = useState(82);
   const [scoreUpdateFlash, setScoreUpdateFlash] = useState(null);
 
-  // Reports State
+  // Feedback-related state is grouped together because those values travel as a
+  // single workflow between the reports list and the submission form.
   const [reportFilter, setReportFilter] = useState("All Status");
   const [userReports, setUserReports] = useState([
     { id: 102, station: 'DEMO Colombo High Risk 01 — Colombo', type: 'Overheating', severity: 3, date: '2025-06-01', desc: 'Unit was unusually hot to touch after 20 minutes of charging.', status: 'PUBLISHED' },
@@ -355,7 +360,8 @@ function App() {
     { id: 91, station: 'DEMO Kandy High Risk 02 — Kandy', type: 'Network Outage', severity: 4, date: '2025-05-20', desc: 'Station completely offline for 3 hours, no error displayed.', status: 'FLAGGED' },
   ]);
 
-  // Settings State
+  // Settings state mirrors the backend preference payload so local edits can be
+  // reflected immediately before or after persistence.
   const [settings, setSettings] = useState({
     pushNotifications: true,
     alertThreshold: 70,
@@ -506,7 +512,8 @@ function App() {
 
   const nav = (viewId) => {
     setCurrentView(viewId);
-    // Add to browser history so back button works
+    // Navigation updates the browser history too, which keeps the back button
+    // useful even though the interface behaves like a single-page dashboard.
     window.history.pushState({ view: viewId }, '', `?view=${viewId}`);
   };
 
@@ -514,13 +521,15 @@ function App() {
     window.history.back();
   };
 
-  // Handle browser back button
   useEffect(() => {
+    // This listener keeps SPA navigation and auth entry links from fighting each
+    // other when the user moves backward through browser history.
     const { auth } = getAuthParamsFromLocation();
     const isAuthFlow = auth === "verify-email" || auth === "reset";
 
     if (!historyInitializedRef.current) {
-      // Preserve auth onboarding/reset links instead of overwriting them on first load.
+      // Initial auth and recovery URLs are preserved so onboarding flows can
+      // complete without the dashboard immediately rewriting the address bar.
       if (!isAuthFlow) {
         window.history.replaceState({ view: 'dashboard' }, '', `?view=dashboard`);
       }
@@ -537,7 +546,8 @@ function App() {
       if (event.state && event.state.view) {
         setCurrentView(event.state.view);
       } else {
-        // If back button goes past app history, stay on dashboard
+        // Falling back to the dashboard avoids stranding the user on a blank
+        // state if the browser history stack runs out inside the app shell.
         setCurrentView('dashboard');
         window.history.pushState({ view: 'dashboard' }, '', `?view=dashboard`);
       }
@@ -591,13 +601,15 @@ function App() {
       const accessToken = localStorage.getItem('chargesafe_auth_token');
       const refreshToken = localStorage.getItem('chargesafe_refresh_token');
 
-      // Nothing stored — not logged in
+      // If there is no stored auth state at all, the app simply leaves the user
+      // in the unauthenticated flow without making unnecessary requests.
       if (!accessToken && !refreshToken) return;
 
       try {
         let token = accessToken;
 
-        // No access token but have refresh token — try to refresh first
+        // A refresh-only restore path lets the session survive a stale or
+        // missing access token after the page has been reopened.
         if (!token && refreshToken) {
           const refreshResp = await fetch(`${API_BASE_URL}/auth/refresh`, {
             method: 'POST',
@@ -623,7 +635,8 @@ function App() {
         });
 
         if (!response.ok) {
-          // Access token rejected — try refresh
+          // A rejected access token gets one silent refresh attempt before the
+          // app gives up and returns the user to login.
           if (response.status === 401 && refreshToken) {
             const refreshResp = await fetch(`${API_BASE_URL}/auth/refresh`, {
               method: 'POST',
@@ -819,7 +832,8 @@ function App() {
 
     let response = await makeRequest(token);
 
-    // Token expired — attempt silent refresh once
+    // Authenticated API calls get one silent refresh attempt so short-lived
+    // access tokens do not interrupt normal dashboard activity.
     if (response.status === 401 && refreshToken) {
       try {
         const refreshResp = await fetch(`${API_BASE_URL}/auth/refresh`, {
@@ -837,7 +851,8 @@ function App() {
           response = await makeRequest(token);
         }
       } catch {
-        // refresh failed — fall through to 401 handling below
+        // Any refresh failure falls through to the normal unauthorized handling
+        // path so session cleanup stays centralized in one place.
       }
     }
 
@@ -882,8 +897,9 @@ function App() {
     }
   };
 
-  // Fetch real cyber score whenever the selected station changes (only when logged in)
   useEffect(() => {
+    // The detail view reloads the cyber score when the selected station changes
+    // so the assessment panel always matches the current station context.
     if (!currentStation?.id || !user) {
       setStationCyberScore(null);
       return undefined;
@@ -1334,7 +1350,8 @@ function App() {
 
       const previousStation = stations.find((station) => String(station.id) === String(sId));
 
-      // Add to local state for immediate feedback list updates.
+      // The freshly created report is inserted locally first so the feedback
+      // history updates immediately even before any later refetch completes.
       const sName = previousStation?.name || 'Unknown Station';
       const newReport = {
         id: response.id || userReports.length + 103,
@@ -1920,7 +1937,6 @@ function App() {
 
   return (
     <div id="app">
-      {/* SIDEBAR */}
       <div id="sidebar">
         <div className="sb-logo">
           <img src="/logo.png" alt="Logo" className="sb-logo-img" />
@@ -1983,7 +1999,6 @@ function App() {
         </div>
       </div>
 
-      {/* MAIN */}
       <div id="main">
         <div id="topbar">
           <div className="topbar-title">{currentView.replace('-', ' ').toUpperCase()}</div>
@@ -1994,7 +2009,6 @@ function App() {
         </div>
         <div id="content">
 
-          {/* DASHBOARD */}
           {currentView === 'dashboard' && (
             <div className="view active" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div className="live-ticker">
@@ -2005,10 +2019,8 @@ function App() {
                 </div>
               </div>
 
-              {/* MAIN DASHBOARD LAYOUT - MAP ON LEFT, ALL CONTENT ON RIGHT - NO SCROLLING */}
               <div style={{ display: 'flex', gap: '24px', alignItems: 'stretch', maxWidth: '100%' }}>
                 
-                {/* LEFT SIDE - MAP (FIXED WIDTH) */}
                 <div className="card interactive-banner-map" style={{ padding: 0, width: '320px', flexShrink: 0, aspectRatio: '3/4', overflow: 'hidden', borderBottom: '2px solid var(--border)' }}>
                   <MapContainer 
                     center={[7.8731, 80.7718]} 
@@ -2038,7 +2050,6 @@ function App() {
                   </div>
                 </div>
 
-                {/* MIDDLE COLUMN - QUICK ACTIONS */}
                 <div className="card" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
                   <div className="card-header" style={{ marginBottom: '12px' }}><span className="card-title" style={{ fontSize: '10px' }}>QUICK ACTIONS</span></div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
@@ -2070,7 +2081,6 @@ function App() {
                   )}
                 </div>
 
-                {/* RIGHT SIDE - SUMMARY CARDS */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gridTemplateRows: 'repeat(4, 1fr)', gap: '16px', flex: 1, minWidth: 0 }}>
                   <div className="card stat-card" style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                     <div className="stat-num green" style={{ fontSize: '20px' }}>{stationStats.low}</div>
@@ -2091,7 +2101,6 @@ function App() {
 
                   {false && (
                   <>
-                  {/* LIVE NETWORK FEED */}
                   <div className="card" style={{ padding: '12px 16px', background: 'rgba(0,255,255,0.03)', border: '1px solid rgba(0,255,255,0.1)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <div className="badge badge-cyan" style={{ fontSize: '8px', padding: '2px 6px', flexShrink: 0 }}>LIVE</div>
@@ -2103,9 +2112,7 @@ function App() {
                     </div>
                   </div>
 
-                  {/* QUICK ACTIONS & RECENT ALERTS - 2 COLUMN */}
                   <div className="grid2" style={{ gap: '16px' }}>
-                    {/* QUICK ACTIONS */}
                     <div className="card">
                       <div className="card-header" style={{ marginBottom: '12px' }}><span className="card-title" style={{ fontSize: '10px' }}>QUICK ACTIONS</span></div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -2121,7 +2128,6 @@ function App() {
                       </div>
                     </div>
 
-                    {/* RECENT ALERTS */}
                     <div className="card">
                       <div className="card-header" style={{ marginBottom: '12px' }}>
                         <span className="card-title" style={{ fontSize: '10px' }}>ALERTS</span>
@@ -2162,7 +2168,6 @@ function App() {
               </div>
               )}
 
-              {/* TOP STATIONS TABLE */}
               <div className="card">
                 <div className="card-header">
                   <span className="card-title">Network Status — Top Stations</span>
@@ -2198,7 +2203,6 @@ function App() {
             </div>
           )}
 
-          {/* MAP VIEW (Interactive OSM) */}
           {currentView === 'map' && (
             <div className="view active" style={{ padding: 0, height: 'calc(100vh - 52px)', position: 'relative' }}>
               <div className="map-overlay-controls">
@@ -2267,7 +2271,6 @@ function App() {
             </div>
           )}
 
-          {/* STATION DETAILS */}
           {currentView === 'station' && (
             <div className="view active">
               <div className="flex-between mb24">
@@ -2305,7 +2308,6 @@ function App() {
                 </div>
               </div>
 
-              {/* TEMP HISTORY CHART (FR-15) */}
               <div className="card mb16">
                 <div className="card-header"><span className="card-title">7-Day Temperature History trend</span></div>
                 <div style={{ width: '100%', height: '120px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', padding: '0 20px', gap: '10px' }}>
@@ -2331,7 +2333,6 @@ function App() {
             />
           )}
 
-          {/* CYBER RISK ASSESSMENT (FR-25 to FR-28) */}
           {false && (
             <div className="view active" style={{ padding: '24px' }}>
               <div className="flex-between mb24">
@@ -2387,7 +2388,6 @@ function App() {
             </div>
           )}
 
-          {/* ML RISK SCORE */}
           {currentView === 'mlscore' && (
             <div className="view active">
               <div className="flex-between mb24">
@@ -2421,7 +2421,6 @@ function App() {
                 </div>
               </div>
 
-              {/* SCORE HISTORY TABLE (FR-24) */}
               <div className="card">
                 <div className="card-header"><span className="card-title">Risk Score History (Last 6 Readings)</span></div>
                 <table className="data-table">
@@ -2443,7 +2442,6 @@ function App() {
             </div>
           )}
 
-          {/* AI CHATBOT */}
           {currentView === 'chatbot' && (
             <div className="view active">
               <div className="page-header">
@@ -2489,7 +2487,6 @@ function App() {
                   </div>
                 </div>
 
-                {/* STATION LOOKUP TABLE (FR-40) */}
                 <div className="card">
                   <div className="card-header"><span className="card-title">Station Quick Lookup</span></div>
                   <div className="scrollable" style={{ maxHeight: '300px' }}>
@@ -2511,7 +2508,6 @@ function App() {
             </div>
           )}
 
-          {/* NOTIFICATIONS */}
           {currentView === 'notifications' && (
             <div className="view active">
               <div className="flex-between mb24">
@@ -2543,7 +2539,6 @@ function App() {
             </div>
           )}
 
-          {/* MY REPORTS */}
           {currentView === 'my-reports' && (
             <div className="view active" style={{ padding: '24px' }}>
               <div className="page-header flex-between" style={{ marginBottom: '32px' }}>
@@ -2603,7 +2598,6 @@ function App() {
             </div>
           )}
 
-          {/* FEEDBACK FORM (FR-29 to FR-35) */}
           {currentView === 'incident' && (
             <div className="view active" style={{ padding: '24px' }}>
               <div className="flex-between mb24">
@@ -2704,7 +2698,6 @@ function App() {
             </div>
           )}
 
-          {/* PROFILE */}
           {currentView === 'profile' && (
             <div className="view active">
               <div className="page-header"><div className="page-label">Account</div><div className="page-title">Profile Settings</div></div>
@@ -2869,7 +2862,6 @@ function App() {
             </div>
           )}
 
-          {/* ADMIN PANEL (FR-64 to FR-80) */}
           {currentView.startsWith('admin') && (
             <div className="view active">
               <div className="page-header"><div className="page-label">System Control</div><div className="page-title">Admin Panel</div></div>
@@ -3073,13 +3065,11 @@ function App() {
             </div>
           )}
 
-          {/* SETTINGS VIEW */}
           {currentView === 'settings' && (
             <div className="view active">
               <div className="page-header"><div className="page-label">System</div><div className="page-title">Settings</div></div>
               
               <div className="settings-grid">
-                {/* Left Column */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                   <div className="card">
                     <div className="card-header"><span className="card-title">Notification Preferences</span></div>
@@ -3115,7 +3105,6 @@ function App() {
                   </div>}
                 </div>
 
-                {/* Right Column */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                   <div className="card">
                     <div className="card-header"><span className="card-title">Display & Units</span></div>
@@ -3154,8 +3143,8 @@ function App() {
             </div>
           )}
 
-        </div>{/* /content */}
-      </div>{/* /main */}
+        </div>
+      </div>
 
       <div id="toast-container">
         {toasts.map(t => (

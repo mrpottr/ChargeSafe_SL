@@ -8,6 +8,8 @@ _sentry_sdk = None
 
 
 def init_error_tracking() -> None:
+    # Error tracking is optional by design so local development can stay light,
+    # while production can enable Sentry just by supplying configuration.
     global _sentry_sdk
 
     if not settings.sentry_dsn:
@@ -32,5 +34,7 @@ def init_error_tracking() -> None:
 
 
 def capture_exception(exc: Exception) -> None:
+    # Runtime code can call this helper freely because it becomes a no-op when
+    # external tracking is disabled, which keeps error paths uncomplicated.
     if _sentry_sdk is not None:
         _sentry_sdk.capture_exception(exc)

@@ -5,6 +5,8 @@ from app.core.config import settings
 
 
 def is_request_secure(request) -> bool:
+    # Security decisions need to work in both local direct traffic and proxy
+    # deployments, so this helper checks the URL scheme and forwarded headers.
     if request.url.scheme == "https":
         return True
 
@@ -17,6 +19,8 @@ def is_request_secure(request) -> bool:
 
 
 class HTTPSRedirectMiddleware(BaseHTTPMiddleware):
+    # Redirecting here keeps HTTPS enforcement transparent to route handlers, so
+    # individual endpoints do not need to know whether transport is secure.
     """Redirect insecure requests to HTTPS when enforcement is enabled."""
 
     async def dispatch(self, request, call_next):

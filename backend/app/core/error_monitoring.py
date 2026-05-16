@@ -11,6 +11,8 @@ logger = logging.getLogger(__name__)
 
 
 class ErrorRateMonitoringMiddleware(BaseHTTPMiddleware):
+    # This middleware keeps a short rolling memory of recent 5xx responses so the
+    # backend can warn about error spikes without depending on external tooling.
     """Track recent 5xx responses and log when error rates spike."""
 
     def __init__(self, app):

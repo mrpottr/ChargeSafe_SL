@@ -4,13 +4,13 @@ from sqlalchemy.orm import Session
 
 from app.models import ChargingStation, Report, ScoreHistory
 from app.services.data_loader_service import DataLoaderService
-<<<<<<< HEAD
-=======
 from app.services.risk_state_observer import notify_on_risk_state_change
->>>>>>> 53d3f3e (did some modifications and testings)
 from app.services.risk_score_ml_service import risk_scorer
 
+
 class FeedbackProcessor:
+    # This processor turns a newly submitted report into an immediate rescoring
+    # pass so the station view and notification stream update without a reload.
     @staticmethod
     def process_feedback(report_id: str, station_id: str, db: Session):
         """
@@ -28,24 +28,25 @@ class FeedbackProcessor:
                 print("FeedbackProcessor: Report or Station missing. Aborting.")
                 return
             
-            # STEP 1 & 2: Calculate New Score & Update Database
-<<<<<<< HEAD
-=======
+            # The recalculation happens before the commit so the updated score,
+            # history entry, and notification decision all stay in one transaction.
             previous_risk_score = station.safety_score
->>>>>>> 53d3f3e (did some modifications and testings)
             features_dict = DataLoaderService.map_database_to_features(db, station, report)
             new_risk_score = risk_scorer.calculate_latest_risk_score(features_dict)
             
-            # Update the station record immediately for real-time UI refreshes.
+            # Updating the live station row immediately keeps follow-up fetches in
+            # sync with the just-submitted report.
             station.safety_score = new_risk_score
             station.last_scored_at = datetime.utcnow()
             
-            # Determine Risk Level equivalent from 0-100 score logic natively
+            # The UI still expects the familiar LOW, MEDIUM, and HIGH labels, so
+            # the numeric score is translated back into that banding here.
             if new_risk_score <= 30: new_risk_level = "LOW"
             elif new_risk_score <= 70: new_risk_level = "MEDIUM"
             else: new_risk_level = "HIGH"
             
-            # Record it in history for graph visualization natively provided by app
+            # History rows preserve each automated rescore so the station charts
+            # can explain why the current score moved.
             import uuid
             score_history = ScoreHistory(
                 id=uuid.uuid4(),
@@ -56,10 +57,9 @@ class FeedbackProcessor:
             )
             db.add(score_history)
             
-            # Optionally sync Cyber Risk level to the overall prediction to reflect it in the UI mapping.
+            # The overall cyber badge is kept aligned with the latest score so the
+            # frontend does not have to guess how to map the updated value.
             station.cyber_risk_level = new_risk_level
-<<<<<<< HEAD
-=======
 
             notify_on_risk_state_change(
                 db,
@@ -68,7 +68,6 @@ class FeedbackProcessor:
                 new_score=new_risk_score,
                 timestamp=station.last_scored_at,
             )
->>>>>>> 53d3f3e (did some modifications and testings)
             
             db.commit()
             print(f"FeedbackProcessor: Station {station_id} ML risk score updated to {new_risk_score}")

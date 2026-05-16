@@ -5,6 +5,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    # Centralizing environment parsing here keeps the rest of the backend focused
+    # on business logic while this class handles defaults and safe fallbacks.
     model_config = SettingsConfigDict(
         env_file=(".env", "../.env"),
         env_file_encoding="utf-8",
@@ -107,6 +109,8 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
+    # Settings are cached once per process so repeated imports do not re-read the
+    # environment or drift across different parts of the application.
     return Settings()
 
 

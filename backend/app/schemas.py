@@ -31,6 +31,8 @@ INCIDENT_TYPE_ALIASES = {
 }
 
 
+# Password validation is kept as a shared helper so registration, reset, and
+# password change flows all enforce the same minimum policy.
 def validate_password_policy(password: str) -> str:
     if len(password) < 8:
         raise ValueError(PASSWORD_POLICY_MESSAGE)
@@ -43,7 +45,8 @@ def validate_password_policy(password: str) -> str:
     return password
 
 
-# ============== User Schemas ==============
+# These request and response models cover account creation, login recovery, and
+# MFA onboarding so the auth API speaks a consistent contract end to end.
 class UserRegisterRequest(BaseModel):
     username: str = Field(..., min_length=3, max_length=100)
     email: EmailStr
@@ -153,7 +156,8 @@ class RegistrationMfaCompleteRequest(BaseModel):
     setup_token: str = Field(..., min_length=10)
     code: str = Field(..., pattern=r"^\d{6}$")
 
-# ============== Charging Station Schemas ==============
+# Station schemas shape the data that powers maps, detail panels, score history,
+# and the admin station editor without exposing raw ORM models directly.
 class StationScoreHistoryItem(BaseModel):
     date: str
     score: float
@@ -236,7 +240,8 @@ class StationCyberScoreResponse(BaseModel):
     breakdown: list[CyberScoreBreakdownItem]
 
 
-# ============== Report Schemas ==============
+# Report schemas handle both user-submitted incidents and the internal payloads
+# used when fresh feedback triggers downstream rescoring work.
 class ReportCreate(BaseModel):
     station_id: UUID
     report_type: IncidentType
@@ -291,7 +296,8 @@ class ReportDetailResponse(ReportResponse):
     station: ChargingStationResponse
 
 
-# ============== Notification Schemas ==============
+# Notification schemas keep the frontend payloads small and predictable while
+# preserving the status fields needed for unread counters and badges.
 class NotificationResponse(BaseModel):
     id: UUID
     title: str
@@ -309,7 +315,8 @@ class NotificationMarkRead(BaseModel):
     is_read: bool
 
 
-# ============== Message Schemas ==============
+# Message schemas support the chatbot transcript and keep the stored role and
+# message text aligned with the UI conversation format.
 class MessageCreate(BaseModel):
     role: str = Field(..., pattern="^(user|bot)$")
     text: str = Field(..., min_length=1)
@@ -325,7 +332,8 @@ class MessageResponse(BaseModel):
         from_attributes = True
 
 
-# ============== Settings Schemas ==============
+# Settings schemas represent the user-tunable dashboard and alert preferences
+# that the profile screens save back into the backend.
 class UserSettingsResponse(BaseModel):
     id: UUID
     push_notifications_enabled: bool
@@ -350,7 +358,8 @@ class UserSettingsUpdate(BaseModel):
     warning_threshold: Optional[int] = Field(None, ge=0, le=100)
 
 
-# ============== Auth Token Schemas ==============
+# Token-oriented schemas keep short auth responses explicit so the frontend can
+# handle access, refresh, and one-off auth challenges consistently.
 class TokenResponse(BaseModel):
     access_token: Optional[str] = None
     refresh_token: Optional[str] = None
@@ -381,7 +390,8 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     reply: str
 
-# ============== Score History Schemas ==============
+# These final lightweight models support the charting endpoints that expose
+# historical scoring data without pulling in unrelated station fields.
 class ScoreHistoryResponse(BaseModel):
     date: str
     score: float

@@ -4,7 +4,10 @@ from app.services.risk_score_ml_service import ML_LIBS_AVAILABLE, risk_scorer
 
 import numpy as np
 
+
 class TrainingService:
+    # Incremental training is kept behind this service so the feedback pipeline
+    # can request model refreshes without owning ML artifact details itself.
     @staticmethod
     def trigger_incremental_update(station_id: str, db: Session):
         """
@@ -17,14 +20,16 @@ class TrainingService:
             
         print(f"Triggering incremental training update for station {station_id}...")
         
-        # 1. Fetch recent reviews for incremental experience replay
+        # Recent reports act as a small replay buffer so each update sees fresh
+        # user feedback instead of only the single newest report.
         recent_reports = DataLoaderService.get_recent_reviews(db, num_samples=20)
         if not recent_reports:
             return
         
-        # 2. Build Mini-Batch Dataset
+        # The mini-batch is assembled in memory to keep the incremental update
+        # compact and avoid repeated database lookups for the same station.
         from app.models import ChargingStation
-        # Cache stations to avoid N+1 querying in this minibatch loop
+        # A local station cache keeps this loop from turning into an N+1 query pattern.
         station_cache = {}
         X_batch_raw = []
         
@@ -59,14 +64,14 @@ class TrainingService:
             
         X_batch_raw = np.array(X_batch_raw, dtype=float)
         
-        # 3. Feature Extraction (Scale + CNN)
+        # Feature extraction mirrors the offline training pipeline so the booster
+        # continues to receive the same hybrid representation shape.
         X_sc = risk_scorer.scaler.transform(X_batch_raw)
         X_deep = risk_scorer.cnn_extractor.predict(X_sc.reshape(-1, X_sc.shape[1], 1), verbose=0)
         X_hyb = np.hstack([X_sc, X_deep])
         
-        # 4. Generate 'Labels' for incremental update based on severity 
-        # (In real scenario, labels are assigned by analysts or severity maps)
-        # Assuming Severity >= 3 is 'High', == 2 is 'Medium', <= 1 is 'Low'
+        # Labels are approximated from severity here to keep the online update
+        # path simple until a richer analyst-reviewed labeling flow exists.
         def get_label(rep):
             if rep.severity >= 3: return "High"
             if rep.severity == 2: return "Medium"
@@ -75,20 +80,23 @@ class TrainingService:
         y_labels = [get_label(r) for r in recent_reports if r.station_id in station_cache]
         y_batch = risk_scorer.label_encoder.transform(y_labels)
         
-        # 5. Continuous Online Update (XGBoost incremental fit)
+        # The final step updates the underlying booster in place and writes the
+        # refreshed artifact back to disk for later scoring calls.
         try:
-            # xgb_model refers to XGBClassifier wrapper interface. 
-            # We access the internal Booster to update.
+            # The wrapper exposes the raw booster, which is what XGBoost expects
+            # for a lightweight incremental update round.
             booster = risk_scorer.xgb_model.get_booster()
             
             import xgboost as xgb
             dmat = xgb.DMatrix(X_hyb, label=y_batch)
             
-            # Perform single round of boosting update
+            # A single boosting round keeps the update cheap enough to run as a
+            # background maintenance action.
             print("Running XGBoost incremental partial fit...")
             booster.update(dmat, booster.best_iteration or 0)
             
-            # Save updated artifact back
+            # Persisting the refreshed model immediately keeps future scoring and
+            # later training steps pointed at the same artifact version.
             model_path = risk_scorer.models_dir + "/xgb_risk_classifier.json"
             risk_scorer.xgb_model.save_model(model_path)
             

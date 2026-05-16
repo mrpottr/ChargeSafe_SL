@@ -5,6 +5,8 @@ MAX_FAILED_LOGIN_ATTEMPTS = 5
 ACCOUNT_LOCKOUT_DURATION = timedelta(minutes=30)
 
 
+# These helpers keep the lockout policy small and predictable so the login route
+# can enforce retry limits without duplicating the timing rules in several places.
 def clear_expired_lockout(user, now) -> bool:
     if user.locked_until and user.locked_until <= now:
         user.locked_until = None

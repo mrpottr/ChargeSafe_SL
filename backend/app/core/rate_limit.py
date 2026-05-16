@@ -18,11 +18,17 @@ limiter = Limiter(key_func=get_remote_address, headers_enabled=False)
 class ApiRateLimitMiddleware(BaseHTTPMiddleware):
     """Apply a lightweight in-memory rate limit to every API route."""
 
+    # This function sets up the in-memory rate limiting middleware when the application starts. 
+    # It is built by initializing a thread-safe lock and a tracking dictionary that 
+    # uses double-ended queues to keep track of recent request timestamps for each client.
     def __init__(self, app):
         super().__init__(app)
         self._request_log: dict[str, deque[float]] = defaultdict(deque)
         self._lock = Lock()
 
+    # This function determines how to uniquely identify the source of an incoming request for rate limiting. 
+    # It is built by first looking for an authorization token hash to identify logged-in users, 
+    # and safely falls back to the client's IP address for unauthenticated requests.
     @staticmethod
     def _client_key(request: Request) -> str:
         auth_header = request.headers.get("Authorization", "")
@@ -33,12 +39,18 @@ class ApiRateLimitMiddleware(BaseHTTPMiddleware):
         client_host = request.client.host if request.client else "unknown"
         return f"ip:{client_host}"
 
+    # This function decides the maximum number of requests allowed per minute based on the route being accessed. 
+    # It is built using simple string matching to enforce stricter limits on sensitive endpoints 
+    # like authentication, while applying a broader limit for general API traffic.
     @staticmethod
     def _limit_for_path(path: str) -> int:
         if path.startswith("/api/auth/"):
             return settings.auth_rate_limit_per_minute
         return settings.api_rate_limit_per_minute
 
+    # This function checks if a client has exceeded their allowed request quota within a given time window. 
+    # It is built using a sliding window algorithm that removes expired timestamps and 
+    # uses a thread lock to safely calculate whether to accept the request or enforce a cooldown.
     def _consume_slot(self, key: str, limit: int, window_seconds: int) -> tuple[bool, int]:
         import time
 
@@ -57,6 +69,9 @@ class ApiRateLimitMiddleware(BaseHTTPMiddleware):
             hits.append(now)
             return True, retry_after
 
+    # This function intercepts every HTTP request to enforce the rate limiting policy before it reaches the core application. 
+    # It is built to bypass non-API paths, compute the specific limit for the requested endpoint, 
+    # and either reject traffic with a 429 status or allow it to proceed seamlessly.
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
         if not path.startswith("/api/"):
