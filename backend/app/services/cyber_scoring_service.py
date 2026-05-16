@@ -8,6 +8,8 @@ from app.models import ChargingStation, CyberCriterion, CyberRiskLevel, CyberSco
 
 
 class CyberScoringService:
+    # This service converts station telemetry into per-criterion cyber findings
+    # so the dashboard can show both an overall posture and a detailed breakdown.
     @staticmethod
     def _score_to_risk_level(score_value: int, criterion: CyberCriterion) -> CyberRiskLevel:
         if score_value >= criterion.score_high:
@@ -18,6 +20,8 @@ class CyberScoringService:
 
     @staticmethod
     def _base_score(station: ChargingStation) -> int:
+        # The base score is a compact shared signal built from the raw station
+        # telemetry before each criterion adds its own domain-specific logic.
         score = 0
 
         safety_score = float(station.safety_score or 0)
@@ -61,6 +65,8 @@ class CyberScoringService:
 
     @staticmethod
     def _criterion_score(station: ChargingStation, criterion: CyberCriterion) -> tuple[int, str]:
+        # Each criterion reuses the same telemetry but interprets it through a
+        # different policy lens so the notes stay meaningful in the UI.
         # Normalise to lowercase+stripped so DB name casing never causes a silent miss
         name = (criterion.criterion_name or "").strip().lower()
         base_score = CyberScoringService._base_score(station)
@@ -155,6 +161,8 @@ class CyberScoringService:
 
     @staticmethod
     def score_station(db: Session, station: ChargingStation) -> int:
+        # Scoring a single station replaces stale criterion rows so every result
+        # shown to the frontend comes from one consistent evaluation moment.
         criteria = db.query(CyberCriterion).order_by(CyberCriterion.criterion_name.asc()).all()
         if not criteria:
             return 0
@@ -192,6 +200,8 @@ class CyberScoringService:
 
     @staticmethod
     def score_all_stations(db: Session) -> dict[str, int]:
+        # Bulk scoring is used during sync and startup to refresh the entire
+        # fleet in one pass and return a simple operational summary.
         stations = db.query(ChargingStation).all()
         scored_stations = 0
         created_scores = 0

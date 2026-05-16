@@ -60,6 +60,9 @@ Make the user feel like they understand what’s happening, not just what the sc
 If the risk score is very high (80+), assume serious issues like overheating, overload, or faults and explain accordingly."""
 
 
+# This function identifies which charging station a user is referring to in their chat message. 
+# It is built by normalizing text, tokenizing words, and calculating an overlap score 
+# between the user's input and the database station names to find the best match.
 def _find_station_match(user_message: str, stations: Iterable[Any]) -> Optional[Any]:
     lowered_message = user_message.lower()
     normalized_message = re.sub(r"[^a-z0-9]+", " ", lowered_message).strip()
@@ -93,6 +96,9 @@ def _find_station_match(user_message: str, stations: Iterable[Any]) -> Optional[
     return best_match
 
 
+# This function maps a numerical risk score into a descriptive risk band category. 
+# It is built using straightforward threshold logic to classify the score into 
+# 'low', 'medium', or 'high' severity levels.
 def _risk_band(score: Optional[float]) -> str:
     if score is None:
         return "unknown"
@@ -103,6 +109,9 @@ def _risk_band(score: Optional[float]) -> str:
     return "high"
 
 
+# This function acts as an offline safety net when the live Gemini AI service is unavailable. 
+# It is built to analyze the user's question, query the local database directly, 
+# and construct a hardcoded but helpful response regarding station safety.
 def _build_local_fallback_reply(user_message: str, db=None) -> str:
     if not db:
         return (
@@ -161,6 +170,9 @@ def _build_local_fallback_reply(user_message: str, db=None) -> str:
     )
 
 
+# This function detects whether a user is specifically asking for the current risk score of a station. 
+# It is built using simple keyword matching against predefined sets of inquiry terms 
+# and score-related terminology.
 def _is_direct_station_score_question(user_message: str) -> bool:
     message = user_message.lower()
     score_terms = ("risk score", "score", "risk level", "risk", "safe", "unsafe")
@@ -168,6 +180,9 @@ def _is_direct_station_score_question(user_message: str) -> bool:
     return any(term in message for term in score_terms) and any(term in message for term in ask_terms)
 
 
+# This function is the primary entry point for the AI chatbot feature, handling all user interactions. 
+# It is built to intercept the query, inject real-time database context if a station is matched, 
+# and send the enriched prompt to the Gemini API while gracefully falling back if needed.
 def generate_chat_reply(user_message: str, db=None) -> str:
     dynamic_context = ""
     # Only execute context injection if DB is passed, fulfilling the "access database directly" spec

@@ -23,6 +23,9 @@ ML_LIBS_AVAILABLE = xgb is not None and keras is not None
 
 
 class RiskScoreMLService:
+    # This function initializes the RiskScoreMLService by setting up necessary paths and placeholders for machine learning models. 
+    # It is built to automatically detect if the required machine learning dependencies (XGBoost, TensorFlow) are available, 
+    # and safely attempts to load the pre-trained artifacts if possible.
     def __init__(self):
         self.models_dir = os.path.join(os.path.dirname(__file__), "..", "..", "models")
         self.initialized = False
@@ -46,6 +49,9 @@ class RiskScoreMLService:
             self.initialization_error = f"Missing ML dependencies: {', '.join(missing)}"
             logger.warning(self.initialization_error)
 
+    # This function loads the trained machine learning models, scalers, and encoders from the filesystem into memory. 
+    # It is built using standard Python deserialization (pickle and json) alongside TensorFlow and XGBoost loading mechanisms, 
+    # ensuring the prediction engine is fully prepared to calculate risk scores.
     def _load_artifacts(self):
         try:
             self.xgb_model = xgb.XGBClassifier()
@@ -72,6 +78,9 @@ class RiskScoreMLService:
             self.initialization_error = str(exc)
             logger.exception("Failed to load hybrid ML artifacts: %s", exc)
 
+    # This function calculates a comprehensive risk score for a charging station based on its raw data attributes and feedback. 
+    # It is built by transforming the raw data using loaded scalers, passing it through a hybrid CNN-XGBoost pipeline, 
+    # and adjusting the final score based on recent user feedback signals.
     def calculate_latest_risk_score(self, raw_feature_dict: Dict[str, Any]) -> float:
         if not self.initialized:
             raise RuntimeError(
@@ -108,6 +117,9 @@ class RiskScoreMLService:
         risk_score = float(np.clip(risk_score + review_modifier * 0.5 + feedback_signal_adjustment, 0.0, 100.0))
         return round(risk_score, 1)
 
+    # This function translates a numerical risk score into a visual hex color code for frontend display. 
+    # It is built using simple threshold comparisons to return green for low risk, yellow for medium risk, 
+    # and red for high risk scenarios.
     @staticmethod
     def get_color_from_risk_score(risk_score: float) -> str:
         if risk_score < 30:
@@ -116,6 +128,9 @@ class RiskScoreMLService:
             return "#f1c40f"
         return "#e74c3c"
 
+    # This function categorizes a numerical risk score into a human-readable text label. 
+    # It is built similarly to the color mapper, using predefined score boundaries to classify 
+    # the station as 'Low Risk', 'Medium Risk', or 'High Risk'.
     @staticmethod
     def get_risk_level_from_score(risk_score: float) -> str:
         if risk_score < 30:
@@ -124,6 +139,9 @@ class RiskScoreMLService:
             return "Medium Risk"
         return "High Risk"
 
+    # This function takes an individual charging station's data dictionary and adds calculated visual properties. 
+    # It is built by safely extracting the station's risk score and appending the corresponding 
+    # color hex code and risk level string directly into the dictionary.
     @staticmethod
     def enrich_station_with_color(station_dict: Dict[str, Any]) -> Dict[str, Any]:
         risk_score = station_dict.get("risk_score", 50.0)
@@ -140,6 +158,9 @@ class RiskScoreMLService:
         enriched["risk_level"] = RiskScoreMLService.get_risk_level_from_score(risk_score)
         return enriched
 
+    # This function processes a complete list of charging station dictionaries, adding visual properties to each one. 
+    # It is built using a Python list comprehension that applies the single-station enrichment logic 
+    # iteratively across the entire dataset.
     @staticmethod
     def enrich_stations_with_colors(stations_list: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         return [RiskScoreMLService.enrich_station_with_color(station) for station in stations_list]

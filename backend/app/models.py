@@ -9,6 +9,8 @@ import uuid
 Base = declarative_base()
 
 
+# Enum values are reused by both SQLAlchemy and Pydantic, so this helper keeps
+# the database-facing representation aligned with the uppercase API contracts.
 def enum_values(enum_cls):
     return [member.value for member in enum_cls]
 
@@ -52,6 +54,8 @@ class ReportStatus(str, enum.Enum):
     resolved = "RESOLVED"
 
 
+# User records carry the authentication, profile, notification, and session
+# links that power nearly every authenticated flow in the platform.
 class User(Base):
     __tablename__ = "users"
 
@@ -79,6 +83,8 @@ class User(Base):
 
 
 class ChargingStation(Base):
+    # Stations are the central operational entity, so telemetry, reports, scores,
+    # and history tables all fan out from this model.
     __tablename__ = "charging_stations"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -124,6 +130,8 @@ class ChargingStation(Base):
 
 
 class CyberCriterion(Base):
+    # Each criterion defines how a single cyber control is weighted and how raw
+    # score numbers map back into the app's LOW, MEDIUM, and HIGH bands.
     __tablename__ = "cyber_criteria"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -158,6 +166,8 @@ class CyberScore(Base):
 
 
 class Report(Base):
+    # Incident reports capture user-submitted operational feedback and become the
+    # main bridge between qualitative events and risk-score recalculation.
     __tablename__ = "incident_reports"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -180,6 +190,8 @@ class Report(Base):
 
 
 class Notification(Base):
+    # Notifications persist the messages that surface risk changes and workflow
+    # events back to individual users inside the frontend.
     __tablename__ = "notifications"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -195,6 +207,8 @@ class Notification(Base):
 
 
 class Message(Base):
+    # Chat history stays lightweight here so the assistant UI can show recent
+    # conversations without needing a separate messaging subsystem.
     __tablename__ = "messages"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -207,6 +221,8 @@ class Message(Base):
 
 
 class UserSettings(Base):
+    # Per-user settings keep presentation and alert thresholds customizable
+    # without complicating the core authentication profile.
     __tablename__ = "user_settings"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -225,6 +241,8 @@ class UserSettings(Base):
 
 
 class ScoreHistory(Base):
+    # Score history turns each recalculation into a timeline entry so the UI can
+    # chart how a station's risk posture moves over time.
     __tablename__ = "score_history"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -238,6 +256,8 @@ class ScoreHistory(Base):
 
 
 class TemperatureHistory(Base):
+    # Temperature history is tracked separately from the live station row so the
+    # dashboard can show trends instead of only the latest reading.
     __tablename__ = "temperature_history"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -249,6 +269,8 @@ class TemperatureHistory(Base):
 
 
 class AuditLog(Base):
+    # Audit logs preserve who triggered sensitive actions and what the outcome
+    # was, even when the primary business action succeeds independently.
     __tablename__ = "audit_logs"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -264,6 +286,8 @@ class AuditLog(Base):
 
 
 class UserSession(Base):
+    # Persistent sessions back refresh tokens, inactivity checks, logout flows,
+    # and global revocation when account security changes.
     __tablename__ = "user_sessions"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)

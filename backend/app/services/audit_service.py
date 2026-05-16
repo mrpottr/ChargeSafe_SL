@@ -11,6 +11,8 @@ logger = logging.getLogger(__name__)
 
 
 class AuditService:
+    # Audit logging is isolated in this service so security-sensitive routes can
+    # record context consistently without duplicating serialization logic.
     @staticmethod
     def build_request_context(request) -> dict[str, Any]:
         client_ip = request.client.host if request.client else None
@@ -50,8 +52,8 @@ class AuditService:
     def log_event_safely(_db, **kwargs) -> None:
         audit_db = SessionLocal()
         try:
-            # Keep audit logging isolated so auth and other user flows succeed
-            # even if audit persistence fails because of legacy schema drift.
+            # Audit writes run in their own session so authentication and other
+            # user-facing flows can still succeed if logging persistence fails.
             audit_db.add(AuditService.log_event(**kwargs))
             audit_db.commit()
         except SQLAlchemyError:

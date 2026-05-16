@@ -16,6 +16,8 @@ API_CONTENT_SECURITY_POLICY = "; ".join(
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    # Response hardening lives in middleware so the app can stamp consistent
+    # headers and cookie flags across every route without touching handlers.
     """Attach security headers without changing application logic."""
 
     @staticmethod

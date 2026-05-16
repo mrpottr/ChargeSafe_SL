@@ -20,7 +20,8 @@ logger = logging.getLogger(__name__)
 
 configure_logging()
 
-# Create tables
+# The application finishes its own bootstrapping here so a local developer can
+# start the API without running a separate migration step first.
 Base.metadata.create_all(bind=engine)
 ensure_schema_compatibility(engine)
 
@@ -49,6 +50,8 @@ app.include_router(router, prefix="/api")
 
 @app.on_event("startup")
 def startup_sync_openchargemap():
+    # Startup keeps the demo experience warm by seeding known records, pulling the
+    # latest station feed, and recalculating cyber scores before requests arrive.
     """Auto-sync charging stations from OpenChargeMap on app startup."""
     db = None
     try:
@@ -69,6 +72,8 @@ def startup_sync_openchargemap():
 
 @app.get("/")
 def root():
+    # This lightweight route gives containers and humans a quick way to confirm
+    # the service name, version, and health without hitting protected APIs.
     """Root endpoint."""
     return {
         "name": settings.app_name,

@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 
+// These small formatters keep the cyber profile view readable by translating
+// backend risk values into badge colors, titles, and user-friendly timestamps.
 const riskBadgeMap = {
   LOW: "green",
   MEDIUM: "amber",
@@ -23,6 +25,8 @@ function CyberProfile({ currentStation, authApi, nav, addToast }) {
   const [cyberBusy, setCyberBusy] = useState(false);
 
   useEffect(() => {
+    // The panel reloads whenever the selected station changes so the criterion
+    // breakdown always reflects the station the user is currently inspecting.
     if (!currentStation?.id) return undefined;
 
     let cancelled = false;

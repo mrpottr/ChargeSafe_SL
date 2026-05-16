@@ -5,12 +5,16 @@ from app.core.config import settings
 
 
 class EmailService:
+    # Outbound email flows stay in one place so auth routes only need to decide
+    # which message to send and not how SMTP should be negotiated.
     @staticmethod
     def is_configured() -> bool:
         return bool(settings.smtp_host and settings.smtp_from_email)
 
     @staticmethod
     def _ensure_configured() -> None:
+        # Failing fast here produces a clear application error before the code
+        # gets deep into message construction or network calls.
         if not EmailService.is_configured():
             raise ValueError("SMTP settings are not configured")
 

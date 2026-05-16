@@ -6,6 +6,8 @@ from sqlalchemy.engine import Engine
 logger = logging.getLogger(__name__)
 
 
+# These SQL patches let the current ORM tolerate older project databases by
+# filling in missing tables, columns, enum values, and indexes on startup.
 SCHEMA_PATCHES = [
     """
     DO $$
@@ -47,8 +49,6 @@ SCHEMA_PATCHES = [
     END $$;
     """,
     """
-<<<<<<< HEAD
-=======
     DO $$
     BEGIN
         IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'incidenttype') THEN
@@ -64,7 +64,6 @@ SCHEMA_PATCHES = [
     END $$;
     """,
     """
->>>>>>> 53d3f3e (did some modifications and testings)
     ALTER TABLE charging_stations
         ADD COLUMN IF NOT EXISTS firmware_version VARCHAR(50),
         ADD COLUMN IF NOT EXISTS firmware_age_days INTEGER,
@@ -139,8 +138,6 @@ SCHEMA_PATCHES = [
         recorded_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
     );
     """,
-<<<<<<< HEAD
-=======
     """
     ALTER TABLE users
         ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT TRUE,
@@ -322,11 +319,12 @@ SCHEMA_PATCHES = [
         END LOOP;
     END $$;
     """,
->>>>>>> 53d3f3e (did some modifications and testings)
 ]
 
 
 def ensure_schema_compatibility(engine: Engine) -> None:
+    # Applying compatibility patches during startup keeps the app resilient on
+    # team machines where the schema may lag behind the latest code changes.
     """
     Patch older database schemas so the live ORM and API can run without manual migration steps.
     """

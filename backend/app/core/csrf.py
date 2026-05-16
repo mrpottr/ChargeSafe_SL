@@ -8,6 +8,8 @@ from app.core.config import settings
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 
 
+# These small request inspectors let the middleware distinguish browser cookie
+# flows from bearer-token API traffic before it applies any CSRF checks.
 def _request_has_non_csrf_cookies(request) -> bool:
     cookie_names = {name.strip() for name in request.cookies.keys() if name.strip()}
     if not cookie_names:
@@ -29,6 +31,8 @@ def _origin_is_allowed(request) -> bool:
 
 
 class CSRFMiddleware(BaseHTTPMiddleware):
+    # The middleware only steps in for state-changing browser requests, which
+    # keeps the API token flows simple while still protecting cookie sessions.
     """Protect cookie-backed state-changing requests without affecting bearer-token APIs."""
 
     async def dispatch(self, request, call_next):

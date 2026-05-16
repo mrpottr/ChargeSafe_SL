@@ -6,6 +6,8 @@ from app.core.config import settings
 
 
 class JsonFormatter(logging.Formatter):
+    # Structured logs make container output easier to search and forward because
+    # every record is emitted as consistent JSON with optional extra metadata.
     def format(self, record: logging.LogRecord) -> str:
         payload = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -25,6 +27,8 @@ class JsonFormatter(logging.Formatter):
 
 
 def configure_logging() -> None:
+    # Logging setup is intentionally idempotent so repeated imports can refresh
+    # handler formatting without stacking duplicate console handlers.
     root_logger = logging.getLogger()
     log_level = getattr(logging, settings.log_level.upper(), logging.INFO)
 

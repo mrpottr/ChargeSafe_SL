@@ -137,6 +137,8 @@ SEED_STATIONS = [
 
 
 def seed_initial_data(db: Session) -> None:
+    # This seeding routine keeps the demo dataset predictable by removing retired
+    # placeholders, upserting the curated stations, and backfilling history rows.
     now = datetime.utcnow()
 
     stale_stations = db.query(ChargingStation).filter(ChargingStation.name.in_(REMOVED_STATION_NAMES)).all()
@@ -204,7 +206,8 @@ def seed_initial_data(db: Session) -> None:
 
     admin_email = "admin@chargesafe.app"
 
-    # Create admin user if it doesn't exist
+    # The bootstrap step also guarantees the default admin account exists so a
+    # fresh environment does not get stuck before the first login.
     existing_admin = db.query(User).filter(User.username == "admin").first()
     if not existing_admin:
         admin_password = os.environ.get("ADMIN_PASSWORD", "")

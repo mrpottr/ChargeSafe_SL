@@ -10,10 +10,12 @@ from app.core.config import settings
 from app.db.session import get_db
 from app.models import User, UserSession
 
-# Password hashing
+# Password hashing lives at module scope so every auth flow shares the same
+# bcrypt policy and avoids reinitializing the context on each request.
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# Security
+# The bearer scheme is optional at parse time because the dependency functions
+# decide when to return clean 401 errors versus letting anonymous routes pass.
 security = HTTPBearer(auto_error=False)
 
 
@@ -352,6 +354,8 @@ async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db)
 ) -> User:
+    # Resolving the current user does more than decode a token. It also verifies
+    # the backing account and session state so revoked sessions stop immediately.
     """Get the current authenticated user from JWT token."""
     if credentials is None or not credentials.credentials:
         raise HTTPException(
@@ -401,6 +405,8 @@ async def get_current_user(
 async def get_current_admin(
     current_user: User = Depends(get_current_user),
 ) -> User:
+    # Admin-only routes reuse the standard user guard first so role checks happen
+    # on top of the same session and activity validation path as normal users.
     """Ensure the current user is an admin."""
     from app.models import UserRole
 
